@@ -201,6 +201,12 @@ class SkillEvaluationTests(unittest.TestCase):
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_ci_cache_tracks_the_development_requirements(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("cache-dependency-path: requirements-dev.txt", workflow)
+
     def test_skill_stays_within_progressive_disclosure_limit(self) -> None:
         skill = ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
         self.assertLessEqual(len(skill.read_text(encoding="utf-8").splitlines()), 500)
