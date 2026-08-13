@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 # RAG production engineer
@@ -45,8 +45,9 @@ Apply these routing rules:
 
 - For `DESIGN`, inspect the current system and produce decisions, gates, and
   delivery phases. Do not implement unless the user requests implementation.
-- For `IMPLEMENT`, continue through code changes and verification. Do not stop
-  after describing a plan.
+- For `IMPLEMENT`, continue through code changes and verification when the
+  requested target exists. If a named existing target is absent, apply the
+  workspace-mismatch hard gate instead of inventing a replacement.
 - For `DEBUG`, reproduce and locate the failure before proposing a fix.
 - For `OPTIMIZE`, preserve the current configuration as the baseline and change
   one meaningful variable at a time.
@@ -171,6 +172,9 @@ POLICY, INDEX, AND OUTPUT CONTRACTS.
 
 NO CAPACITY, LATENCY, DURATION, OR COST CLAIM WITHOUT EXPLICIT
 UNITS, INPUTS, FORMULA, ASSUMPTIONS, AND A RECOMPUTATION CHECK.
+
+NO SUBSTITUTE FILES WHEN A REQUESTED EXISTING CONFIGURATION,
+TEST, OR APPLICATION TARGET IS ABSENT. REPORT WORKSPACE MISMATCH AND STOP.
 ```
 
 Apply these rules throughout the task:
@@ -206,8 +210,11 @@ When the requested application file, configuration, or test is absent after a
 repository-wide search, report a workspace mismatch and stop that implementation
 path. Do not create substitute application artifacts in a skill, documentation,
 or unrelated repository unless the user explicitly requested a greenfield
-scaffold. Ask for the correct repository or path; for skill evaluation, use a
-disposable fixture outside the product tree.
+scaffold in their latest request. Words such as `fixture-only`, `existing`, or
+`documented` do not grant permission to create missing targets. Do not reason
+past this gate because creating a replacement appears harmless or helpful. Ask
+for the correct repository or path; for skill evaluation, use a disposable
+fixture outside the product tree.
 
 Capture this workload profile:
 

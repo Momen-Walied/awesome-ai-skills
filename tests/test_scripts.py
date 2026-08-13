@@ -259,11 +259,21 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertEqual(case["expected_plan_level"], "P3")
 
+    def test_missing_target_case_forbids_substitute_artifacts(self) -> None:
+        cases = skill_evals.load_jsonl(ROOT / "evals" / "cases.jsonl", "cases")
+        case = next(
+            case for case in cases if case["id"] == "missing-bounded-change-target"
+        )
+        self.assertEqual(case["expected_mode"], "IMPLEMENT")
+        self.assertIn("substitute-artifacts", case["forbidden_signals"])
+        self.assertTrue(case["manual_review"])
+
     def test_skill_enforces_numeric_and_workspace_integrity(self) -> None:
         text = (
             ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
         ).read_text(encoding="utf-8")
         self.assertIn("RECOMPUTATION CHECK", text)
+        self.assertIn("NO SUBSTITUTE FILES", text)
         self.assertIn("workspace mismatch", text)
         self.assertIn("Do not create substitute application artifacts", text)
 
