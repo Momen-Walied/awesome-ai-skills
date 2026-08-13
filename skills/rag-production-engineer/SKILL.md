@@ -5,8 +5,9 @@ description: >-
   retrieval-augmented generation systems. Always use this skill for repository
   work involving a RAG ingestion or retrieval pipeline, including small config
   and test changes to chunk size, chunk overlap, parsing, embeddings, indexing,
-  vector or hybrid search, reranking, or grounded generation. Also trigger for
-  evaluation, tracing, monitoring, latency, cost, fallbacks, security,
+  vector or hybrid search, reranking, or grounded generation. Load it before
+  repository exploration, planning, or edits. Also trigger for evaluation,
+  tracing, monitoring, latency, cost, fallbacks, security,
   multi-tenant isolation, large-scale data, production readiness, incidents,
   vendor selection, and multi-vendor migration. Enforce repository inspection,
   proportional reviewed plans, tracked execution, measurable baselines, phase
@@ -15,7 +16,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.4"
+  version: "0.1.5"
 ---
 
 # RAG production engineer
@@ -113,8 +114,8 @@ blast radius, uncertainty, and reversibility.
 
 | Level | Use when | Required artifact |
 | --- | --- | --- |
-| `P0` | Factual answer or one obvious local action | Ledger or direct answer |
-| `P1` | Bounded change in one component | Proposed plan in chat |
+| `P0` | Factual answer or read-only inspection with no repository mutation | Direct answer |
+| `P1` | Bounded code, config, test, or documentation change | Proposed plan in chat |
 | `P2` | Cross-component or production behavior change | Reviewed Markdown plan |
 | `P3` | Migration, high-risk, large-scale, or multi-vendor program | Staged Markdown plan |
 
@@ -123,6 +124,10 @@ followed by a concise proposed plan before editing. When the task has three
 actions such as locate, update, and verify, use those actions as the execution
 ledger. Do not replace these declarations with a retrospective summary because
 the change appears trivial.
+
+Any requested repository mutation starts at `P1`, including a one-line value
+change. Never downgrade config plus focused-test work to `P0` because the
+behavioral change has only one variable.
 
 Require `P2` or `P3` for new architectures, data or index migrations, ACL or
 security changes, provider changes, multi-vendor routing, distributed scaling,

@@ -286,6 +286,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Always use this skill", frontmatter)
         self.assertIn("small config", frontmatter)
         self.assertIn("chunk overlap", frontmatter)
+        self.assertIn("before\n  repository exploration", frontmatter)
+
+    def test_any_repository_mutation_starts_at_p1(self) -> None:
+        text = (
+            ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("read-only inspection with no repository mutation", text)
+        self.assertIn("Any requested repository mutation starts at `P1`", text)
+        self.assertIn("config plus focused-test work", text)
 
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
