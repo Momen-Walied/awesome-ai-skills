@@ -28,6 +28,10 @@ CASE_COMMANDS = {
         "verify": "git status --short",
         "inspect_diff": "git diff --exit-code",
     },
+    "multi-vendor-migration": {
+        "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
+        "inspect_diff": "git diff --stat",
+    },
 }
 
 

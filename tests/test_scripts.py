@@ -400,6 +400,26 @@ class RepositoryContractTests(unittest.TestCase):
 
 
 class EvaluationWorkspaceTests(unittest.TestCase):
+    def test_vendor_migration_fixture_preserves_blocking_unknowns(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "workspace"
+            result = eval_workspace.prepare_workspace(
+                "multi-vendor-migration", output
+            )
+            status = subprocess.run(
+                ["git", "status", "--short"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            context = (output / "CURRENT_STATE.txt").read_text(encoding="utf-8")
+            self.assertEqual(status.stdout, "")
+            self.assertIn("80 million chunks", context)
+            self.assertIn("Unknown inputs", context)
+            self.assertIn("Vendor B sustained write throughput", context)
+            self.assertIn("docs/plans", result["verify"])
+
     def test_greenfield_design_fixture_has_no_implementation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "workspace"

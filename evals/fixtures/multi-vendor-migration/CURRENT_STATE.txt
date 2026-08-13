@@ -1,0 +1,17 @@
+Current production RAG state
+
+- Vendor A serves retrieval for 80 million chunks.
+- The target is hybrid retrieval on Vendor B.
+- Vendor A must remain available as failover during migration.
+- The generation model will change in the same program.
+- Tenant ACL semantics differ between the two retrieval vendors.
+- Production downtime and cross-tenant leakage are not acceptable.
+
+Unknown inputs
+
+- Embedding model, dimensions, distance metric, and vector portability.
+- Daily write, update, delete, and permission-revocation rates.
+- Vendor B sustained write throughput, query quotas, and filter limits.
+- Exact ACL capability differences and tenant isolation requirement.
+- Dual-run cost ceiling, approved duration, and retirement window.
+- Current retrieval baseline, score consumers, and cutover thresholds.
