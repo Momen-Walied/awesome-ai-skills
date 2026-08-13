@@ -43,6 +43,14 @@ DURATION_PATTERN = re.compile(
     r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(ms|milliseconds?|s|seconds?)\b",
     re.IGNORECASE,
 )
+ROLLOUT_WINDOW_PATTERN = re.compile(
+    r"\b(?:canary|burn[- ]?in|hold|dual[- ]run window|retirement window)\b.*?"
+    r"\b\d+(?:\s*[-–]\s*\d+)?\s*(?:minutes?|hours?|days?|h|d)\b",
+    re.IGNORECASE,
+)
+EVIDENCE_LABEL_PATTERN = re.compile(
+    r"\b(?:MEASURED|ESTIMATED|PROPOSED|DECIDED|UNKNOWN)\b"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,6 +72,17 @@ def heading_body(text: str, heading: str) -> str | None:
 def metadata_value(text: str, key: str) -> str | None:
     match = re.search(rf"^\*\*{re.escape(key)}:\*\*\s*(.+)$", text, re.MULTILINE)
     return match.group(1).strip() if match else None
+
+
+def audit_result(body: str) -> str | None:
+    match = re.search(r"^(?:\*\*)?Result:(?:\*\*)?\s*(.+)$", body, re.MULTILINE)
+    if not match:
+        return None
+    value = match.group(1)
+    for result in ("AWAITING_DECISIONS", "READY", "FAIL", "PASS"):
+        if re.search(rf"\b{result}\b", value):
+            return result
+    return None
 
 
 def duration_ms(value: str) -> float | None:
@@ -123,12 +142,39 @@ def validate_latency_budget(body: str) -> list[str]:
     if not any("headroom" in row[0].lower() and row[1] > 0 for row in stage_rows):
         errors.append("P3 latency budget must reserve positive headroom")
 
-    if any("concurrent" in row[2].lower() for row in stage_rows):
+    if any(
+        re.search(r"\b(?:concurrent(?:ly)?|parallel)\s+with\b", row[2], re.IGNORECASE)
+        for row in stage_rows
+    ):
         errors.append(
             "P3 latency table must combine concurrent branches into one "
             "critical-path row"
         )
 
+    return errors
+
+
+def validate_budget_assumptions(body: str) -> list[str]:
+    errors: list[str] = []
+    for line in body.splitlines():
+        if re.search(r"\bpeak\s*/\s*\d", line, re.IGNORECASE):
+            errors.append(
+                "P3 budgets must not derive average traffic or duty cycle from "
+                "an invented peak ratio"
+            )
+            break
+    return errors
+
+
+def validate_rollout_windows(body: str) -> list[str]:
+    errors: list[str] = []
+    for line in body.splitlines():
+        if ROLLOUT_WINDOW_PATTERN.search(line) and not EVIDENCE_LABEL_PATTERN.search(line):
+            errors.append(
+                "P3 canary, hold, burn-in, and retirement windows must carry "
+                "an evidence label"
+            )
+            break
     return errors
 
 
@@ -138,6 +184,10 @@ def validate_migration_contracts(text: str) -> list[str]:
     correctness = heading_body(text, "Migration correctness") or ""
     budgets = heading_body(text, "Capacity, latency, and cost budgets") or ""
     rollout = heading_body(text, "Rollout and rollback") or ""
+    mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", text, re.DOTALL)
+    sequence_text = "\n".join(
+        block for block in mermaid_blocks if re.search(r"\bsequenceDiagram\b", block)
+    )
 
     compatibility_checks = (
         (r"embedding", "embedding model"),
@@ -217,6 +267,21 @@ def validate_migration_contracts(text: str) -> list[str]:
     if not re.search(r"crossed|factorial|four combinations", text, re.IGNORECASE):
         errors.append("MIGRATE plans must evaluate crossed retrieval and generation combinations")
 
+    sequence_checks = (
+        (r"(?:snapshot|checkpoint|watermark)", "snapshot or watermark"),
+        (r"backfill", "backfill"),
+        (r"dual[- ]write|ordered.*mutation", "ordered live mutations"),
+        (r"reconcil", "reconciliation"),
+        (r"shadow", "shadowing"),
+        (r"canary", "canary"),
+        (r"cutover", "cutover"),
+        (r"fallback|failback", "fallback"),
+        (r"retir", "retirement"),
+    )
+    for pattern, label in sequence_checks:
+        if not re.search(pattern, sequence_text, re.IGNORECASE):
+            errors.append(f"MIGRATE sequence diagram must show {label}")
+
     if not re.search(
         r"(?:one[- ]time\s+)?backfill\s+cost|"
         r"cost\s+(?:of|for)\s+(?:the\s+)?backfill",
@@ -231,6 +296,54 @@ def validate_migration_contracts(text: str) -> list[str]:
         re.IGNORECASE,
     ):
         errors.append("MIGRATE budgets must include incremental dual-run cost")
+    if not re.search(
+        r"(?:migration|backfill)[_ ]duration.*(?:chunks per second|chunks/s|throughput)|"
+        r"(?:chunks per second|chunks/s|throughput).*(?:migration|backfill)[_ ]duration",
+        budgets,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        errors.append("MIGRATE budgets must separate backfill duration from cost")
+
+    backfill_formula = next(
+        (
+            paragraph
+            for paragraph in re.split(r"\n\s*\n", budgets)
+            if re.search(r"backfill\s+cost", paragraph, re.IGNORECASE)
+        ),
+        None,
+    )
+    if backfill_formula:
+        formula_match = re.search(
+            r"backfill\s+cost", backfill_formula, re.IGNORECASE
+        )
+        if formula_match is None:
+            raise AssertionError("backfill formula selection lost its marker")
+        formula = backfill_formula[formula_match.start() :]
+        if re.search(
+            r"/.*(?:throughput|chunks/s|chunks per second).*(?:\*|×)",
+            formula,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            errors.append(
+                "MIGRATE backfill cost is dimensionally invalid: do not "
+                "multiply duration by a per-chunk price"
+            )
+        if not re.search(
+            r"billing unit|per\s+(?:1,?000|million|chunk|token|operation)",
+            formula,
+            re.IGNORECASE,
+        ):
+            errors.append("MIGRATE backfill cost must show the provider billing unit")
+
+    for line in budgets.splitlines():
+        if re.search(r"dual[- ]run\s+cost", line, re.IGNORECASE) and re.search(
+            r"(?:\*|×|x)\s*2\b", line, re.IGNORECASE
+        ):
+            errors.append(
+                "MIGRATE dual-run cost must price Vendor A and Vendor B "
+                "separately instead of multiplying writes by two"
+            )
+            break
     if not re.search(
         r"(?:failure detection|timeout|deadline).*fallback retrieval|"
         r"fallback retrieval.*(?:failure detection|timeout|deadline)",
@@ -300,15 +413,16 @@ def validate(text: str, level: str) -> list[str]:
         errors.append("Target system must contain its Mermaid diagram")
 
     audit_body = heading_body(text, "Plan audit") or ""
-    if not re.search(r"\b(?:PASS|FAIL|READY|AWAITING_DECISIONS)\b", audit_body):
+    result = audit_result(audit_body)
+    if result is None:
         errors.append("Plan audit must record an explicit result")
 
-    if "AWAITING_DECISIONS" in audit_body and status != "AWAITING_DECISIONS":
+    if result == "AWAITING_DECISIONS" and status != "AWAITING_DECISIONS":
         errors.append(
             "Status must be AWAITING_DECISIONS when the audit result is "
             "AWAITING_DECISIONS"
         )
-    if re.search(r"\bREADY\b", audit_body) and status not in {
+    if result == "READY" and status not in {
         "READY",
         "APPROVED",
         "IN_PROGRESS",
@@ -344,9 +458,12 @@ def validate(text: str, level: str) -> list[str]:
             ):
                 errors.append("P3 budgets must label numerical evidence")
             errors.extend(validate_latency_budget(budget_body))
+            errors.extend(validate_budget_assumptions(budget_body))
 
         if mode == "MIGRATE":
             errors.extend(validate_migration_contracts(text))
+            rollout_body = heading_body(text, "Rollout and rollback") or ""
+            errors.extend(validate_rollout_windows(rollout_body))
 
     placeholders = sorted(set(PLACEHOLDER_PATTERN.findall(text)))
     if placeholders:

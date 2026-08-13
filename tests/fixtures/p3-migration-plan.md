@@ -86,9 +86,10 @@ thresholds, and accepted retrieval and answer-quality deltas.
 ## Capacity, latency, and cost budgets
 
 UNKNOWN: effective chunks per second and production QPS. Migration duration =
-remaining chunks / effective chunks per second. One-time backfill cost = source
-reads + writes + egress + optional embedding. Incremental dual-run cost per day
-= Vendor A storage and queries + Vendor B storage and shadow queries. All prices
+remaining chunks / effective chunks per second. One-time backfill cost =
+billable chunks / billing unit chunks * price per billing unit + source reads +
+egress + optional embedding. Incremental dual-run cost per day = Vendor A
+storage and writes + Vendor B storage and writes + shadow queries. All prices
 remain UNKNOWN until verified.
 
 Fallback critical path:
@@ -141,5 +142,7 @@ cutover thresholds, and the dual-run ceiling.
 
 ## Plan audit
 
-Result: AWAITING_DECISIONS. Contract validation passes, but owner decisions and
-measured baselines still block implementation.
+**Result:** AWAITING_DECISIONS
+
+Contract validation passes, but owner decisions and measured baselines still
+block implementation. The status can move to READY only after those decisions.

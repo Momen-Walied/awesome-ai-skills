@@ -180,6 +180,14 @@ sequenceDiagram
         errors = plan_document.validate(text, "P2")
         self.assertTrue(any("Status must be AWAITING_DECISIONS" in error for error in errors))
 
+    def test_audit_result_ignores_future_status_mentions_in_prose(self) -> None:
+        body = """
+**Result:** AWAITING_DECISIONS
+
+Resolve the owner decision before moving the plan to READY.
+"""
+        self.assertEqual(plan_document.audit_result(body), "AWAITING_DECISIONS")
+
     def test_p3_latency_budget_rejects_bad_total_and_parallel_rows(self) -> None:
         body = """
 | Stage | Budget p95 | Notes |
@@ -202,6 +210,16 @@ sequenceDiagram
 """
         errors = plan_document.validate_latency_budget(body)
         self.assertIn("P3 latency budget must reserve positive headroom", errors)
+
+    def test_p3_latency_budget_allows_one_combined_parallel_stage(self) -> None:
+        body = """
+| Stage | Budget p95 | Notes |
+| --- | --- | --- |
+| Hybrid retrieval | 300 ms | Dense and lexical run concurrently; slower branch wins |
+| Headroom | 100 ms | Variance |
+| Total | 400 ms | Recomputed total |
+"""
+        self.assertEqual(plan_document.validate_latency_budget(body), [])
 
     def test_p3_latency_budget_rejects_multiple_path_totals(self) -> None:
         body = """
@@ -250,6 +268,42 @@ sequenceDiagram
         errors = plan_document.validate(text, "P3")
         self.assertTrue(any("one-time backfill cost" in error for error in errors))
         self.assertTrue(any("incremental dual-run cost" in error for error in errors))
+
+    def test_p3_migration_rejects_dimensionally_invalid_costs(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace(
+            "billable chunks / billing unit chunks * price per billing unit",
+            "chunks / throughput chunks/s * price per 1,000 chunks",
+        )
+        text = text.replace(
+            "Vendor A\nstorage and writes + Vendor B storage and writes",
+            "daily mutations * 2 (Vendor A + Vendor B writes)",
+        )
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("dimensionally invalid" in error for error in errors))
+        self.assertTrue(any("price Vendor A and Vendor B separately" in error for error in errors))
+
+    def test_p3_budget_rejects_invented_peak_ratio(self) -> None:
+        body = "Average QPS is UNKNOWN; use peak / 3 as an ESTIMATED duty cycle."
+        errors = plan_document.validate_budget_assumptions(body)
+        self.assertTrue(any("invented peak ratio" in error for error in errors))
+
+    def test_p3_migration_sequence_requires_cutover_and_retirement(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("Cutover", "Promote")
+        text = text.replace("Retire", "Remove")
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("sequence diagram must show cutover" in error for error in errors))
+        self.assertTrue(any("sequence diagram must show retirement" in error for error in errors))
+
+    def test_p3_rollout_windows_require_evidence_labels(self) -> None:
+        body = "Canary a tenant cohort and monitor for 24-48 h."
+        errors = plan_document.validate_rollout_windows(body)
+        self.assertTrue(any("evidence label" in error for error in errors))
+        self.assertEqual(
+            plan_document.validate_rollout_windows("PROPOSED: Canary for 24 h."),
+            [],
+        )
 
 
 class SkillEvaluationTests(unittest.TestCase):
@@ -409,6 +463,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Planning level: P1", text)
         self.assertIn("Capacity, latency, and cost budgets", text)
         self.assertIn("structural validator pass means only", text)
+        self.assertIn("next visible work update", text)
 
     def test_skill_description_pushes_small_rag_config_triggers(self) -> None:
         text = (

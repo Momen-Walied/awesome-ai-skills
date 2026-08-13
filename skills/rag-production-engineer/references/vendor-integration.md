@@ -148,6 +148,26 @@ incremental dual-run cost per day, and projected steady-state cost. Keep vendor
 prices and effective throughput `UNKNOWN` until measured or verified from
 first-party sources.
 
+Keep duration and cost formulas dimensionally separate. For example:
+
+```text
+backfill_duration_seconds = total_chunks / effective_chunks_per_second
+backfill_write_cost =
+  total_billable_chunks / billing_unit_chunks * price_per_billing_unit
+reembedding_cost =
+  total_source_tokens / token_billing_unit * embedding_price_per_billing_unit
+dual_run_cost_per_day =
+  vendor_a_daily_storage + vendor_b_daily_storage
+  + vendor_a_daily_writes + vendor_b_daily_writes
+  + shadow_query_cost + observability_cost
+```
+
+Do not multiply elapsed seconds by a per-chunk price, and do not collapse two
+vendors into `write volume * 2` unless both billing units and prices are proven
+identical. Keep an unknown peak-to-average ratio or duty cycle independent from
+peak QPS; use labeled sensitivity cases rather than deriving
+`average = peak / N`.
+
 ## Integrate by category
 
 Select current products from verified documentation at implementation time.

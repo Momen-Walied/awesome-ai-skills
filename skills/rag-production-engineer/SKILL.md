@@ -2,23 +2,23 @@
 name: rag-production-engineer
 description: >-
   MANDATORY: invoke this skill before any repository or reference tool call for
-  production retrieval-augmented generation work. Design, implement, review,
-  debug, scale, migrate, and operate RAG systems. Always use it for repository
-  work involving a RAG ingestion or retrieval pipeline, including small config
-  and test changes to chunk size, chunk overlap, parsing, embeddings, indexing,
-  vector or hybrid search, reranking, or grounded generation. Load it before
-  repository exploration, planning, or edits, then begin with the mode,
-  planning level, and execution ledger. Also trigger for evaluation, tracing,
-  monitoring, latency, cost, fallbacks, security,
-  multi-tenant isolation, large-scale data, production readiness, incidents,
-  vendor selection, and multi-vendor migration. Enforce repository inspection,
-  proportional reviewed plans, tracked execution, measurable baselines, phase
-  gates, and fresh verification. Do not use for generic prompting or
-  fine-tuning tasks that do not retrieve external knowledge.
+  production RAG work. Design, implement, review, debug, scale, migrate, and
+  operate RAG systems. Always use it for repository work involving RAG ingestion
+  or retrieval, including small config and test changes to chunk size,
+  chunk overlap, parsing, embeddings, indexing, hybrid search, reranking, or
+  grounded generation. Load it before
+  repository exploration, planning, or edits. After invocation, the next visible
+  work update must start with mode, then
+  planning level, and execution ledger before explanatory prose. Also trigger
+  for evaluation, tracing, monitoring, latency, cost, fallbacks, security,
+  multi-tenancy, large-scale data, incidents, vendor selection, and multi-vendor
+  migration. Enforce inspection, reviewed plans, tracked execution, measurable
+  baselines, phase gates, and fresh verification. Do not use for prompting or
+  fine-tuning tasks without external retrieval.
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.9"
+  version: "0.1.10"
 ---
 
 # RAG production engineer
@@ -35,6 +35,10 @@ Before any repository inspection, reference read, delegated task, or other tool
 call, publish `Mode: <MODE>`, `Planning level: P0|P1|P2|P3`, and the execution
 ledger required by the scope. This preflight is the first work update, not a
 summary added after exploration.
+
+After the skill invocation, make the next visible work update begin with these
+literal lines, in this order: `Mode:`, `Planning level:`, and `Execution
+ledger:`. Do not place routing prose or the ledger before those declarations.
 
 ## Route the task
 

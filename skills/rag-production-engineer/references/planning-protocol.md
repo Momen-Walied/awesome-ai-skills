@@ -140,6 +140,10 @@ and evidence-based upgrade triggers.
 Record the audit result, gaps found, revisions made, and final readiness state.
 ```
 
+Put the lifecycle result only on an explicit `**Result:**` line in the plan
+audit. Explanatory prose may discuss future states without changing the
+recorded result.
+
 Add file paths, interfaces, schemas, commands, and expected results when they
 remove implementation ambiguity. Avoid fictional line numbers or code details
 that repository inspection cannot support.
@@ -159,10 +163,11 @@ For `P3`, also include:
 3. A migration, cutover, fallback, or failure sequence diagram.
 
 For `MIGRATE`, the sequence must show the snapshot/checkpoint, dual-write or
-change capture, ordered backfill, delete and revocation handling, reconciliation,
-shadowing, canary, cutover, fallback, and retirement. Keep retrieval-provider and
-generation-model flags independent. Validate the crossed combinations offline,
-then canary one production axis at a time so regressions remain attributable.
+change capture, ordered backfill, delete and revocation handling,
+reconciliation, shadowing, canary, cutover, fallback, and retirement. Keep
+retrieval-provider and generation-model flags independent. Validate the crossed
+combinations offline, then canary one production axis at a time so regressions
+remain attributable.
 
 The sequence must represent the observed current state and proposed rollout.
 For greenfield work, use an initial rollout or failure sequence; do not invent a

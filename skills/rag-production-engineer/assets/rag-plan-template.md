@@ -68,4 +68,7 @@ Record decisions, unresolved high-impact questions, and residual risks.
 
 ## Plan audit
 
-Record `PASS`, `FAIL`, `READY`, or `AWAITING_DECISIONS` with evidence.
+**Result:** FAIL
+
+Replace `FAIL` with `READY` or `AWAITING_DECISIONS` only after the audit, and
+record the evidence for that result.
