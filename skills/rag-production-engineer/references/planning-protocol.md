@@ -26,6 +26,14 @@ Use `FAIL` as the plan-audit result only when the document still has a defect
 the planner can fix. Use `AWAITING_DECISIONS` when unavailable owner input is
 the only blocker; don't disguise that state as `PROPOSED` plus `FAIL`.
 
+Do not self-approve recommended defaults to force a plan into `READY`. A
+directive to continue autonomously or avoid clarification does not grant
+authority over vendor selection, transactional guarantees, authorization
+semantics, production service levels, cost ceilings, or risk acceptance. Finish
+all planner-owned work and stop at `AWAITING_DECISIONS`; this is a complete
+planning result. Keep owner-decision tasks open until an authorized answer is
+actually received.
+
 ## Resolve facts before asking
 
 Inspect the codebase, configuration, deployment manifests, schemas, traces,
@@ -105,6 +113,13 @@ watermark, per-record version ordering, idempotency keys, tombstones, permission
 revocations, replay, reconciliation, and the freshness gate for every fallback.
 Show separate authorization adapters for each vendor when their filter semantics
 differ. A retained but stale index is not a valid failover.
+
+For every fallback or rollback index, prove that ordered content updates,
+deletes, and permission revocations continue to reach it. Gate eligibility on
+both a data freshness watermark and a separate policy freshness watermark. If
+either gate is stale or unknown, remove the index from routing and fail closed
+or return a bounded degraded response. Query sensitivity or user tolerance does
+not make stale authorization safe.
 
 When the source has no CDC or mutation log, state the feasibility boundary
 before designing the migration. Couple the source mutation and ordered event
@@ -307,6 +322,12 @@ After the audit, resolve discoverable findings and ask only blocking
 clarifications. Update the document with answers and decisions. Mark the plan
 `READY` when no material ambiguity remains and every planned slice has a
 completion criterion.
+
+Before marking a plan `READY`, require a named accountable owner and resolve
+every material `UNKNOWN` that changes architecture, security, data contracts,
+service levels, cost approval, or rollout. Proposed defaults and a planning
+assumptions package remain recommendations, not owner decisions. Do not mark a
+decision-collection task complete until the decision is received.
 
 Run the structural validator before changing the status to `READY`:
 

@@ -5,6 +5,9 @@
 **Owners:** UNKNOWN
 **Last updated:** UNKNOWN
 
+Keep `Owners` as `UNKNOWN` while drafting. A plan cannot become `READY` until
+an accountable owner is named and material owner decisions are resolved.
+
 ## Outcome
 
 State the user or business outcome and the measurable completion condition.
@@ -96,3 +99,7 @@ Record residual risks, then make unavailable owner input decision-ready:
 
 Replace `FAIL` with `READY` or `AWAITING_DECISIONS` only after the audit, and
 record the evidence for that result.
+
+Do not turn unresolved owner inputs into assumptions to obtain `READY`.
+`AWAITING_DECISIONS` is the correct final state for complete planning work that
+still needs an authorized decision.

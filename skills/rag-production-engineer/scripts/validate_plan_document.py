@@ -262,6 +262,65 @@ def has_owner_decision_blocker(text: str) -> bool:
     )
 
 
+def validate_ready_state(
+    text: str, status: str | None, result: str | None
+) -> list[str]:
+    if result != "READY" and status not in {
+        "READY",
+        "APPROVED",
+        "IN_PROGRESS",
+        "IMPLEMENTED",
+    }:
+        return []
+
+    errors: list[str] = []
+    owners = metadata_value(text, "Owners") or ""
+    if re.search(r"\bUNKNOWN\b|\bTBD\b", owners, re.IGNORECASE):
+        errors.append("READY plans require a named accountable owner")
+
+    evidence = heading_body(text, "Evidence and assumptions") or ""
+    material_input = re.compile(
+        r"vendor|provider|transaction|database|write path|authorization|ACL|"
+        r"tenant|SLO|service level|cost budget|cost ceiling|risk acceptance|"
+        r"QPS|query rate|workload|corpus|chunk count|rollout",
+        re.IGNORECASE,
+    )
+    for line in evidence.splitlines():
+        if "UNKNOWN" in line.upper() and material_input.search(line):
+            errors.append(
+                "READY plans cannot retain material UNKNOWN inputs for "
+                "architecture, security, service levels, cost, or rollout"
+            )
+            break
+
+    assumptions = heading_body(text, "Planning assumptions package") or ""
+    if assumptions and re.search(
+        r"owner input|before implementation|must be (?:validated|confirmed|replaced)|"
+        r"placeholder|assumed true|owner approval|required before",
+        assumptions,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            "READY plans cannot replace unresolved owner decisions with a "
+            "planning assumptions package"
+        )
+
+    if re.search(
+        r"(?:can|will)\s+(?:then\s+)?be marked\s+`?READY`?|"
+        r"before implementation[^.\n]{0,120}(?:replace|validate|confirm|approve)|"
+        r"(?:replace|validate|validated|confirm|approve)"
+        r"[^.\n]{0,120}before implementation|"
+        r"owner-dependent\s+unknowns?",
+        text,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            "READY status contradicts unresolved pre-implementation decisions "
+            "or evidence gates"
+        )
+    return errors
+
+
 def validate_security_language(text: str) -> list[str]:
     errors: list[str] = []
     for line in text.splitlines():
@@ -349,6 +408,86 @@ def validate_zero_downtime_without_cdc(text: str) -> list[str]:
         errors.append(
             "zero-downtime migration without source CDC must block cutover or "
             "require an approved write freeze when any writer bypasses capture"
+        )
+    return errors
+
+
+def validate_migration_fallback(text: str) -> list[str]:
+    correctness = heading_body(text, "Migration correctness") or ""
+    rollout = heading_body(text, "Rollout and rollback") or ""
+    fallback_text = correctness + "\n" + rollout
+    old_vendor = r"Vendor\s+A|Old[- ]Vendor|old\s+(?:vendor|index|provider)"
+    fallback = r"fallback|failback|rollback"
+
+    if not re.search(
+        rf"(?:{fallback})[^.\n]{{0,100}}(?:{old_vendor})|"
+        rf"(?:{old_vendor})[^.\n]{{0,100}}(?:{fallback})",
+        fallback_text,
+        re.IGNORECASE,
+    ):
+        return []
+
+    errors: list[str] = []
+    snapshot_only_fallback = re.search(
+        rf"(?:{old_vendor})[^.\n]{{0,160}}(?:only|solely)"
+        r"[^.\n]{0,80}(?:nightly|periodic)?\s*snapshots?|"
+        rf"(?:only|solely)[^.\n]{{0,80}}(?:nightly|periodic)?\s*snapshots?"
+        rf"[^.\n]{{0,160}}(?:{old_vendor})",
+        text,
+        re.IGNORECASE,
+    )
+    ordered_to_fallback = re.search(
+        rf"(?:{old_vendor})[^.\n]{{0,140}}"
+        r"(?:ordered|dual[- ]write|outbox|mutation|delete|revocation)|"
+        r"(?:ordered|dual[- ]write|outbox|mutation|delete|revocation)"
+        rf"[^.\n]{{0,140}}(?:{old_vendor})|"
+        r"(?:tombstone|delete|revocation|mutation)[^.]{0,140}"
+        r"both\s+(?:indexes|vendors|providers)[^.]{0,80}"
+        r"(?:acknowledge|receive|apply)|"
+        r"both\s+(?:indexes|vendors|providers)[^.]{0,80}"
+        r"(?:acknowledge|receive|apply)[^.]{0,140}"
+        r"(?:tombstone|delete|revocation|mutation)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if snapshot_only_fallback or not ordered_to_fallback:
+        errors.append(
+            "MIGRATE fallback must receive ordered content, delete, and "
+            "permission-revocation mutations"
+        )
+
+    has_data_gate = re.search(
+        rf"(?:{fallback})[^.]{{0,180}}(?:data|content)"
+        r"[^.]{0,80}(?:watermark|freshness|version|reconciliation)|"
+        r"(?:data|content)[^.]{0,80}(?:watermark|freshness|version|reconciliation)"
+        rf"[^.]{{0,180}}(?:{fallback})",
+        fallback_text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    has_policy_gate = re.search(
+        rf"(?:{fallback})[^.]{{0,180}}(?:policy|authorization|ACL|permission)"
+        r"[^.]{0,80}(?:watermark|freshness|version|reconciliation)|"
+        r"(?:policy|authorization|ACL|permission)"
+        r"[^.]{0,80}(?:watermark|freshness|version|reconciliation)"
+        rf"[^.]{{0,180}}(?:{fallback})",
+        fallback_text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not has_data_gate or not has_policy_gate:
+        errors.append(
+            "MIGRATE fallback eligibility requires separate data and policy "
+            "freshness gates"
+        )
+
+    if re.search(
+        r"fallback[^.\n]{0,100}(?:acceptable|allowed)[^.\n]{0,100}tolerat|"
+        r"fallback\.allow_stale|allow[_ -]?stale[_ -]?(?:index|fallback)",
+        text,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            "stale authorization state cannot be made fallback-eligible by "
+            "query sensitivity or tolerance"
         )
     return errors
 
@@ -602,6 +741,8 @@ def validate(text: str, level: str) -> list[str]:
 
     audit_body = heading_body(text, "Plan audit") or ""
     risks_body = heading_body(text, "Risks and decisions") or ""
+    evidence_body = heading_body(text, "Evidence and assumptions") or ""
+    assumptions_body = heading_body(text, "Planning assumptions package") or ""
     result = audit_result(audit_body)
     if result is None:
         errors.append("Plan audit must record an explicit result")
@@ -620,7 +761,7 @@ def validate(text: str, level: str) -> list[str]:
         errors.append("Status must reflect a READY audit result")
 
     has_open_decisions = has_owner_decision_blocker(
-        risks_body + "\n" + audit_body
+        evidence_body + "\n" + risks_body + "\n" + assumptions_body + "\n" + audit_body
     ) or bool(
         re.search(
             r"\b(?:AWAITING_DECISIONS|open decisions?|blocking decisions?|"
@@ -636,6 +777,8 @@ def validate(text: str, level: str) -> list[str]:
                 "for both Status and Result"
             )
         errors.extend(validate_decision_table(risks_body))
+
+    errors.extend(validate_ready_state(text, status, result))
 
     if level == "P3":
         budget_body = heading_body(text, "Capacity, latency, and cost budgets")
@@ -670,6 +813,7 @@ def validate(text: str, level: str) -> list[str]:
         if mode == "MIGRATE":
             errors.extend(validate_migration_contracts(text))
             errors.extend(validate_zero_downtime_without_cdc(text))
+            errors.extend(validate_migration_fallback(text))
             rollout_body = heading_body(text, "Rollout and rollback") or ""
             errors.extend(validate_rollout_windows(rollout_body))
 

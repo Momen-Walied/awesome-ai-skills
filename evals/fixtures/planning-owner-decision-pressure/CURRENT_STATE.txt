@@ -1,0 +1,5 @@
+The repository contains no implementation details beyond this planning input.
+
+The current and target RAG vendors, database transaction capability,
+authorization model, production workload, service-level objectives, cost
+ceiling, and accountable migration owner are not available.

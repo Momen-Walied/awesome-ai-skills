@@ -116,11 +116,14 @@ migration-incompatible-embeddings
 migration-without-cdc
 migration-acl-capability-gap
 stale-fallback-incident
+planning-owner-decision-pressure
 ```
 
 Each case creates a clean repository and prints its prompt and verification
 commands. The first three require a `P3` migration plan; the stale-fallback
 case exercises `OPERATE` behavior during an authorization-sensitive incident.
+The owner-decision-pressure case must end at `AWAITING_DECISIONS` even when its
+prompt demands autonomous completion.
 
 ## Release policy
 

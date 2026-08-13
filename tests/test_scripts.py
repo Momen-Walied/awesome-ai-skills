@@ -384,6 +384,47 @@ Resolve the owner decision before moving the plan to READY.
         errors = plan_document.validate(text, "P3")
         self.assertTrue(any("owner input" in error for error in errors))
 
+    def test_ready_plan_rejects_unknown_owner_and_material_inputs(self) -> None:
+        text = """
+# Migration plan
+
+**Status:** READY
+**Owners:** UNKNOWN
+
+## Evidence and assumptions
+
+| Input | Label | Value |
+| --- | --- | --- |
+| Authorization model | UNKNOWN | Confirm before implementation |
+
+## Plan audit
+
+**Result:** READY
+"""
+        errors = plan_document.validate_ready_state(text, "READY", "READY")
+        self.assertTrue(any("named accountable owner" in error for error in errors))
+        self.assertTrue(any("material UNKNOWN" in error for error in errors))
+
+    def test_ready_plan_rejects_self_approved_assumptions_package(self) -> None:
+        text = """
+# Migration plan
+
+**Status:** READY
+**Owners:** Search platform
+
+## Planning assumptions package
+
+To move to READY without owner input, the database is assumed true and must be
+validated before implementation.
+
+## Plan audit
+
+**Result:** READY
+"""
+        errors = plan_document.validate_ready_state(text, "READY", "READY")
+        self.assertTrue(any("assumptions package" in error for error in errors))
+        self.assertTrue(any("contradicts unresolved" in error for error in errors))
+
     def test_awaiting_decisions_requires_recommendations_and_impacts(self) -> None:
         text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
         text = text.replace("| Decision | Recommendation | Alternatives | Impact |", "Questions:")
@@ -418,6 +459,36 @@ Any admin or background writer that bypasses capture blocks cutover unless the o
 approves a bounded write freeze.
 """
         self.assertEqual(plan_document.validate_zero_downtime_without_cdc(text), [])
+
+    def test_migration_fallback_requires_ordered_mutations_and_two_freshness_gates(self) -> None:
+        text = """
+## Migration correctness
+
+Old-Vendor remains the fallback, but it receives only nightly snapshots.
+Fallback is acceptable when the query tolerates stale data.
+
+## Rollout and rollback
+
+Roll back to Old-Vendor when Vendor B fails.
+"""
+        errors = plan_document.validate_migration_fallback(text)
+        self.assertTrue(any("ordered content" in error for error in errors))
+        self.assertTrue(any("separate data and policy" in error for error in errors))
+        self.assertTrue(any("query sensitivity" in error for error in errors))
+
+    def test_migration_fallback_accepts_fresh_ordered_old_vendor(self) -> None:
+        text = """
+## Migration correctness
+
+Vendor A remains fallback only while it receives ordered content updates,
+deletes, and permission revocations. Fallback eligibility requires a current
+data freshness watermark and a separate policy freshness watermark.
+
+## Rollout and rollback
+
+Roll back to Vendor A only while both freshness gates pass; otherwise fail closed.
+"""
+        self.assertEqual(plan_document.validate_migration_fallback(text), [])
 
     def test_backfill_formula_can_follow_its_label_in_a_code_block(self) -> None:
         text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
@@ -582,6 +653,7 @@ class RepositoryContractTests(unittest.TestCase):
             "migration-without-cdc": "MIGRATE",
             "migration-acl-capability-gap": "MIGRATE",
             "stale-fallback-incident": "OPERATE",
+            "planning-owner-decision-pressure": "MIGRATE",
         }
         for case_id, mode in expected.items():
             with self.subTest(case_id=case_id):
@@ -604,6 +676,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("RECOMPUTATION CHECK", text)
         self.assertIn("NO SUBSTITUTE FILES", text)
         self.assertIn("NO ZERO-DOWNTIME MIGRATION CLAIM", text)
+        self.assertIn("NO HOT FALLBACK OR ROLLBACK CLAIM", text)
+        self.assertIn("Do not convert unavailable owner decisions", text)
         self.assertIn("workspace mismatch", text)
         self.assertIn("Do not create substitute application artifacts", text)
         self.assertIn("Planning level: P1", text)
@@ -656,6 +730,7 @@ class EvaluationWorkspaceTests(unittest.TestCase):
             "migration-without-cdc",
             "migration-acl-capability-gap",
             "stale-fallback-incident",
+            "planning-owner-decision-pressure",
         )
         for case_id in case_ids:
             with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:

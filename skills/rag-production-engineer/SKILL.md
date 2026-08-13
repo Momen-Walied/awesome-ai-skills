@@ -18,7 +18,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.12"
+  version: "0.1.13"
 ---
 
 # RAG production engineer
@@ -123,6 +123,15 @@ user. Ask only for unavailable business decisions, credentials, approvals, or
 facts that materially change the design. Proceed with labeled assumptions when
 the missing information is noncritical.
 
+Do not convert unavailable owner decisions into approved assumptions. Vendor
+choice, transactional capability, authorization semantics, production SLOs,
+cost ceilings, and risk acceptance are material inputs. A request to continue,
+finish autonomously, avoid questions, or close every task does not authorize
+you to decide them. Complete all discoverable work, record recommendations in a
+decision table, leave the plan `AWAITING_DECISIONS`, and keep any task that
+requires an owner answer open. For planning-only work, `AWAITING_DECISIONS` is
+a valid completed deliverable; it is not unfinished planner work.
+
 ## Pass the planning gate
 
 Choose the planning level after initial inspection. Match planning effort to
@@ -210,6 +219,10 @@ FAILURE, AND SECURITY EVIDENCE.
 
 NO MULTI-VENDOR FAILOVER CLAIM WITHOUT COMPATIBLE DATA,
 POLICY, INDEX, AND OUTPUT CONTRACTS.
+
+NO HOT FALLBACK OR ROLLBACK CLAIM UNLESS THE FALLBACK RECEIVES ORDERED CONTENT,
+DELETE, AND REVOCATION EVENTS AND PASSES SEPARATE DATA AND POLICY FRESHNESS
+GATES. QUERY TOLERANCE NEVER MAKES STALE AUTHORIZATION SAFE.
 
 NO ZERO-DOWNTIME MIGRATION CLAIM WITHOUT ATOMIC SOURCE-MUTATION CAPTURE,
 AN ORDERED DURABLE JOURNAL ACTIVE BEFORE THE SNAPSHOT, TOMBSTONES,
