@@ -15,6 +15,16 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "evals" / "cases.jsonl"
 FIXTURES = ROOT / "evals" / "fixtures"
+CASE_COMMANDS = {
+    "bounded-chunk-config": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- app/config.py tests/test_config.py",
+    },
+    "missing-bounded-change-target": {
+        "verify": "git status --short",
+        "inspect_diff": "git diff --exit-code",
+    },
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -76,8 +86,13 @@ def prepare_workspace(case_id: str, output: Path) -> dict[str, str]:
         "case_id": case_id,
         "workspace": str(output.resolve()),
         "prompt": case["prompt"],
-        "verify": "python3 -m unittest discover -s tests -v",
-        "inspect_diff": "git diff -- app/config.py tests/test_config.py",
+        **CASE_COMMANDS.get(
+            case_id,
+            {
+                "verify": "git status --short",
+                "inspect_diff": "git diff --exit-code",
+            },
+        ),
     }
 
 

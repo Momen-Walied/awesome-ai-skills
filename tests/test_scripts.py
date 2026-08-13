@@ -353,6 +353,25 @@ class EvaluationWorkspaceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not empty"):
                 eval_workspace.prepare_workspace("bounded-chunk-config", output)
 
+    def test_missing_target_fixture_is_plan_only_and_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "workspace"
+            result = eval_workspace.prepare_workspace(
+                "missing-bounded-change-target", output
+            )
+            status = subprocess.run(
+                ["git", "status", "--short"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(status.stdout, "")
+            self.assertFalse((output / "app").exists())
+            self.assertFalse((output / "tests").exists())
+            self.assertEqual(result["verify"], "git status --short")
+            self.assertNotIn("do not scaffold", result["prompt"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

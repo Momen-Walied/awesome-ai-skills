@@ -1,0 +1,8 @@
+Production RAG system plan
+
+Status: proposed
+
+The planned system will include ingestion, retrieval, grounded generation,
+evaluation, and observability components. This repository currently contains
+design artifacts only; application configuration and tests live with the
+implementation repository.
