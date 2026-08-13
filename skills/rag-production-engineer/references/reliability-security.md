@@ -75,6 +75,18 @@ or index per tenant does not necessarily require a separate compute fleet per
 tenant; verify the provider's routing, filter, backup, quota, and noisy-neighbor
 semantics before making a cost or security claim.
 
+### Guide a policy-sensitive fallback change
+
+Trace policy resolution and policy-version propagation before tracing the
+fallback. Model primary success, dependency failure with a fresh fallback,
+dependency failure with stale policy, cross-tenant candidates, and recovery.
+Require the host to preserve the primary route and to make unsafe fallback
+states observable while returning denial or abstention.
+
+Prefer a local policy-version or freshness check at the existing routing
+boundary. Do not add a second authorization system, duplicate the policy store,
+or make broad provider abstractions to repair one missing gate.
+
 ## Defend against untrusted content
 
 Treat retrieved documents as untrusted data, not instructions. Separate them

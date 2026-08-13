@@ -198,6 +198,20 @@ Common categories include:
 Use framework-native abstractions only when they do not obscure authorization,
 deadlines, tracing, versioning, or provider-specific failure behavior.
 
+### Guide an integration implementation
+
+Inspect the installed SDK, lockfile, client construction, dependency injection,
+configuration, tests, and existing provider skill before selecting an API
+shape. Verify unstable capabilities and limits against current first-party
+documentation at implementation time. Let the host or specialist skill perform
+SDK, cloud, credential, and deployment operations through available tools.
+
+Guide the host to adapt at the narrowest stable boundary and add contract tests
+for filters, scores, errors, deadlines, retries, telemetry, and fallback. Keep
+provider-specific request and response types at the adapter edge. Do not add a
+multi-provider framework when the task has one provider and no tested exit or
+resilience requirement.
+
 ## Record the decision
 
 For each selected provider, record required capabilities, benchmark evidence,

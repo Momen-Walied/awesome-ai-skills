@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # RAG production engineer
@@ -25,6 +25,11 @@ freshness, security, and reliability targets. Control the work with explicit
 modes, tracked tasks, evidence gates, and bounded fallbacks. Leave every answer
 and design decision explainable. The instructions are portable across Agent
 Skills clients. Bundled Python utilities require Python 3.11 or newer.
+
+This skill guides the host agent; it is not a RAG runtime or a substitute for
+the host's reasoning and tools. The host inspects, decides, calls tools, edits,
+and verifies. These instructions provide domain routing, safety boundaries,
+evidence contracts, and optional deterministic utilities.
 
 ## Adapt to the host
 

@@ -47,6 +47,18 @@ Do not log raw prompts, documents, or personal data by default. Use redaction,
 hashing, sampling, access controls, encryption, and retention limits based on
 the data classification.
 
+### Guide instrumentation changes
+
+Start from the question an operator must answer, then locate the existing
+telemetry boundary and propagation mechanism. Reuse current tracing, metrics,
+and logging libraries. Add the smallest event or span that distinguishes the
+relevant routes, decisions, and failure reasons without copying payloads.
+
+Test emitted telemetry as an observable contract when the repository has a
+test recorder or exporter. Also test the user-visible behavior because a span
+can be correct while the fallback, authorization decision, or response is
+wrong. Do not introduce a new observability vendor merely to add one signal.
+
 ## Define metrics and service indicators
 
 Build service indicators around the user outcome and each dependency.

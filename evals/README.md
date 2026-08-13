@@ -64,11 +64,18 @@ repository unless a short excerpt is necessary to explain a failure.
 
 ## Implementation cases
 
-`top-down-rag-implementation` is the first end-to-end implementation case. It
-contains an existing Spec Kit artifact, a layered retrieval service, telemetry,
-tenant policy, a rollback flag, and one failing acceptance scenario. The agent
-must make the suite pass through a bounded implementation rather than producing
-a parallel plan.
+The implementation suite currently covers three distinct ownership paths:
+
+- `top-down-rag-implementation` tests a flagged retrieval correction with
+  tenant isolation, tracing, and dense rollback.
+- `ingestion-replay-revocation` tests incremental source events, checkpointing,
+  revocation, hard deletion, and replay idempotency.
+- `stale-policy-fallback` tests primary failure, authorization freshness,
+  fail-closed fallback behavior, and route telemetry.
+
+Each case contains an existing Spec Kit artifact and an intentionally failing
+acceptance scenario. The agent must make the suite pass through a bounded
+implementation rather than producing a parallel plan.
 
 Add future implementation fixtures across ingestion replay, retrieval quality,
 authorization, tracing, latency, and provider failure. Keep each fixture small

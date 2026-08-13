@@ -1,0 +1,1 @@
+"""Incremental ingestion evaluation fixture."""

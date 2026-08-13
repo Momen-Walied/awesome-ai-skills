@@ -1,0 +1,115 @@
+{
+  "release": "0.3.0",
+  "recorded_at": "2026-08-13",
+  "hosts": [
+    {
+      "name": "Codex CLI",
+      "version": "0.147.0-alpha.6.5",
+      "model": "gpt-5.5",
+      "skill_root": ".agents/skills"
+    },
+    {
+      "name": "OpenCode",
+      "version": "1.18.15",
+      "model": "kimi-k2.7-code",
+      "skill_root": ".opencode/skills",
+      "orchestrator": "oh-my-openagent Sisyphus"
+    }
+  ],
+  "runs": [
+    {
+      "case_id": "ingestion-replay-revocation",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "other_skills_composed": [
+        "systematic-debugging"
+      ],
+      "changed_files": [
+        "ingestion_service/pipeline.py"
+      ],
+      "diff": {
+        "insertions": 7,
+        "deletions": 1
+      },
+      "visible_suite": {
+        "passed": true,
+        "tests": 4
+      },
+      "extended_audit": {
+        "passed": true,
+        "contract": "unsupported events fail before checkpoint advancement"
+      },
+      "token_usage": 36869,
+      "review": "Bounded event routing through the existing remove method. Unknown event kinds raise before the checkpoint commit."
+    },
+    {
+      "case_id": "ingestion-replay-revocation",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "ingestion_service/pipeline.py"
+      ],
+      "diff": {
+        "insertions": 7,
+        "deletions": 1
+      },
+      "visible_suite": {
+        "passed": true,
+        "tests": 4
+      },
+      "extended_audit": {
+        "passed": false,
+        "contract": "unsupported events fail before checkpoint advancement",
+        "evidence": "The implementation recorded outcome=ignored and advanced the checkpoint to 1."
+      },
+      "token_usage": null,
+      "review": "Revocation, delete, replay, and later upsert passed. The unsupported-event checkpoint gap is retained as a documented model-specific failure instead of adding prescriptive model wording."
+    },
+    {
+      "case_id": "stale-policy-fallback",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "fallback_service/service.py"
+      ],
+      "diff": {
+        "insertions": 9,
+        "deletions": 0
+      },
+      "visible_suite": {
+        "passed": true,
+        "tests": 4
+      },
+      "token_usage": 32396,
+      "review": "Added a local fail-closed policy-sequence gate and blocked trace without changing primary or fresh fallback routes."
+    },
+    {
+      "case_id": "stale-policy-fallback",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "fallback_service/service.py"
+      ],
+      "diff": {
+        "insertions": 9,
+        "deletions": 0
+      },
+      "visible_suite": {
+        "passed": true,
+        "tests": 4
+      },
+      "token_usage": null,
+      "review": "Added the same local safety gate and included result_count on the selected fallback trace."
+    }
+  ],
+  "summary": {
+    "automatic_skill_triggers": 4,
+    "visible_suites_passed": 4,
+    "extended_audit_failures": 1,
+    "core_instruction_changes_from_model_specific_failures": 0
+  }
+}

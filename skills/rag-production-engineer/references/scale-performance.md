@@ -39,6 +39,18 @@ Retries increase tail latency and load. Retry only transient, idempotent
 operations, use exponential backoff with jitter, respect the request deadline,
 and cap attempts.
 
+### Guide a performance implementation
+
+Require a reproducible baseline and trace the measured critical path before
+editing. Choose one bottleneck and one controlled variable, preserve the old
+route as the comparison, and define the load shape, warm-up, sample count, and
+acceptance threshold. Guide the host to use the repository's benchmark or load
+tool rather than inventing a synthetic harness when one already exists.
+
+Reject improvements that move work outside the measured window, weaken recall
+or authorization, increase retries, or omit tail percentiles. Add architecture
+only when profiling shows that a local change cannot meet the gate.
+
 ## Design caches with semantics
 
 Define the cache unit, key, validity, tenant scope, and invalidation event

@@ -56,6 +56,14 @@ CASE_COMMANDS = {
         "verify": "python3 -m unittest discover -s tests -v",
         "inspect_diff": "git diff -- rag_service tests specs .specify",
     },
+    "ingestion-replay-revocation": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- ingestion_service tests specs .specify",
+    },
+    "stale-policy-fallback": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- fallback_service tests specs .specify",
+    },
 }
 
 

@@ -135,6 +135,12 @@ three executable acceptance scenarios. The baseline intentionally fails the
 exact-SKU scenario; a successful agent must edit the implementation and make
 the full suite pass without weakening tenant isolation or dense rollback.
 
+Use `ingestion-replay-revocation` for incremental indexing, checkpoints,
+deletes, revocations, and idempotent replay. Use `stale-policy-fallback` for a
+policy-sensitive timeout fallback that must fail closed when authorization
+state is stale. Both fixtures preserve working paths so an agent must make a
+bounded correction instead of replacing the architecture.
+
 ## Release policy
 
 A release must pass unit tests, Python compilation, corpus validation, the

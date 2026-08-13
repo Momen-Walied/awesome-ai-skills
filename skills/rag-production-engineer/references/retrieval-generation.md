@@ -34,6 +34,19 @@ Inspect failures with this sequence.
 7. Inspect context packing and token truncation.
 8. Inspect generation only after the evidence path is sound.
 
+### Guide a retrieval implementation
+
+Trace the current classifier, policy filters, candidate sources, score fusion,
+ranking, context assembly, and telemetry using real symbols and tests. Select a
+representative failing query class and preserve the current route behind an
+existing flag or boundary when rollback is required.
+
+Guide the host to modify the stage that owns the measured failure and to reuse
+the repository's retriever interfaces. Verify ranking, authorization, empty
+results, trace route, and rollback behavior. Do not prescribe hybrid search,
+reranking, or query expansion when a smaller exact-match or filter correction
+passes the contract.
+
 ## Select retrieval techniques
 
 Use techniques for a demonstrated query class or failure mode.

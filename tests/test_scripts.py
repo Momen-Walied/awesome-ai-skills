@@ -773,6 +773,46 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(len(results["runs"]), 2)
         self.assertTrue(all(run["verification"]["passed"] for run in results["runs"]))
 
+        current_results = json.loads(
+            (ROOT / "evals" / "records" / "v0.3.0-cross-agent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(len(current_results["runs"]), 4)
+        self.assertEqual(current_results["summary"]["extended_audit_failures"], 1)
+        self.assertEqual(
+            current_results["summary"][
+                "core_instruction_changes_from_model_specific_failures"
+            ],
+            0,
+        )
+
+    def test_skill_guides_the_host_instead_of_claiming_execution(self) -> None:
+        skill_root = ROOT / "skills" / "rag-production-engineer"
+        skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        interop = (
+            skill_root / "references" / "agent-interoperability.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("This skill guides the host agent", skill)
+        self.assertIn("The host agent remains the executor", interop)
+        self.assertIn("Bundled scripts support deterministic", interop)
+
+    def test_domain_references_include_implementation_guidance(self) -> None:
+        references = ROOT / "skills" / "rag-production-engineer" / "references"
+        expected_sections = {
+            "ingestion-indexing.md": "Guide an ingestion implementation",
+            "evaluation.md": "Guide an evaluation implementation",
+            "observability.md": "Guide instrumentation changes",
+            "reliability-security.md": "Guide a policy-sensitive fallback change",
+            "retrieval-generation.md": "Guide a retrieval implementation",
+            "scale-performance.md": "Guide a performance implementation",
+            "vendor-integration.md": "Guide an integration implementation",
+        }
+        for filename, section in expected_sections.items():
+            with self.subTest(filename=filename):
+                text = (references / filename).read_text(encoding="utf-8")
+                self.assertIn(section, text)
+
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -911,6 +951,36 @@ class EvaluationWorkspaceTests(unittest.TestCase):
             self.assertTrue((output / ".specify" / "memory" / "constitution.md").is_file())
             self.assertIn("unittest", result["verify"])
             self.assertIn("Do not stop after planning", result["prompt"])
+
+    def test_ingestion_and_fallback_fixtures_have_bounded_failures(self) -> None:
+        cases = {
+            "ingestion-replay-revocation": (3, "test_revocation_removes_document"),
+            "stale-policy-fallback": (1, "test_stale_policy_fallback_is_blocked"),
+        }
+        for case_id, (failure_count, expected_test) in cases.items():
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "workspace"
+                result = eval_workspace.prepare_workspace(case_id, output)
+                baseline = subprocess.run(
+                    ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                status = subprocess.run(
+                    ["git", "status", "--short"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertEqual(status.stdout, "")
+                self.assertNotEqual(baseline.returncode, 0)
+                self.assertEqual(baseline.stderr.count("... FAIL"), failure_count)
+                self.assertIn(expected_test, baseline.stderr)
+                self.assertIn("unittest", result["verify"])
+                self.assertTrue((output / ".specify" / "memory").is_dir())
 
     def test_workspace_setup_rejects_nonempty_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

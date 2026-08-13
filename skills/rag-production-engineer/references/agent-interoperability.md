@@ -34,6 +34,12 @@ Let other capabilities retain their natural ownership:
 - The host orchestrator owns model selection, delegation, continuation, hooks,
   and task persistence.
 
+The host agent remains the executor. Do not simulate tools, prescribe hidden
+reasoning, or claim that this skill performed a repository action. Guide the
+host toward observable operations and let it choose equivalent native tools.
+Bundled scripts support deterministic inspection or calculation; they do not
+replace repository code, provider SDKs, or specialist skills.
+
 Read and extend the existing artifact. Do not create `docs/plans/...` when the
 repository already has an active spec workflow unless that workflow calls for
 it. Do not duplicate a todo list maintained by the host.

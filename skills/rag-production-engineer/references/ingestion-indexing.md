@@ -65,6 +65,20 @@ supports:
 3. Use modified timestamps with overlap and periodic full reconciliation.
 4. Use full scans only when no reliable incremental signal exists.
 
+### Guide an ingestion implementation
+
+For an existing pipeline, trace one source mutation through discovery, durable
+ordering, transformation, index mutation, checkpoint commit, and telemetry.
+Then select scenarios that expose the requested contract: unchanged replay,
+content update, hard delete, permission revocation, out-of-order delivery,
+partial failure, and restart from the last durable checkpoint.
+
+Guide the host to edit the narrowest existing stage that owns the missing
+behavior. Preserve source sequence or version data until the index mutation and
+checkpoint are both durable. Verify state after replay, not only emitted calls.
+Do not introduce a queue, workflow engine, or event framework unless the
+current failure requires one.
+
 ## Scale the data plane
 
 Partition work by a stable key such as tenant or source, while accounting for

@@ -82,6 +82,20 @@ An evaluation gate can require:
 Keep the current production configuration as the baseline. Store configuration,
 code, prompt, model, embedding, index, and dataset versions with every run.
 
+### Guide an evaluation implementation
+
+Locate the repository's existing datasets, scorers, experiment tracking, and
+release command before adding an evaluator. Preserve the current system as the
+baseline, freeze dataset and configuration versions, and change one meaningful
+variable per comparison. Add the smallest missing slice or metric that can
+falsify the proposed improvement.
+
+Guide the host to use framework-native evaluators when their contracts remain
+inspectable, and deterministic local checks for identifiers, authorization,
+schema, and citations. Do not replace a working harness to standardize on a
+preferred evaluation vendor. Report missing labels or judge calibration as
+evidence gaps rather than manufacturing scores.
+
 ## Evaluate in production
 
 Use shadow traffic, canaries, or controlled experiments after offline gates

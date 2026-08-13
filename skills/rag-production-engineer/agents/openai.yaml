@@ -1,4 +1,4 @@
 interface:
   display_name: "RAG Production Engineer"
   short_description: "Analyze and implement production RAG systems"
-  default_prompt: "Use $rag-production-engineer to analyze this RAG system top-down, compose with the repository's existing workflow and tools, implement the smallest justified change, and verify it with runtime evidence."
+  default_prompt: "Use $rag-production-engineer to guide your top-down analysis of this RAG system, compose with the repository's existing workflow and tools, implement the smallest justified change using your native capabilities, and verify it with runtime evidence."
