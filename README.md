@@ -5,6 +5,8 @@ currently ships `rag-production-engineer`, a vendor-neutral skill for designing,
 implementing, debugging, scaling, migrating, auditing, and operating RAG
 systems.
 
+[![skills.sh](https://skills.sh/b/Momen-Walied/awesome-ai-skills)](https://skills.sh/Momen-Walied/awesome-ai-skills)
+
 ## Available skill
 
 ### RAG production engineer
@@ -18,7 +20,17 @@ plans, diagrams, audits, rollout gates, and rollback paths.
 Read the source in the
 [`rag-production-engineer` skill](skills/rag-production-engineer/SKILL.md).
 
-## Install from a local checkout
+## Install
+
+Install the RAG skill from GitHub for supported agents:
+
+```bash
+npx skills@1.5.20 add Momen-Walied/awesome-ai-skills \
+  --skill rag-production-engineer \
+  --agent codex claude-code opencode antigravity
+```
+
+## Develop locally
 
 List the discoverable skills:
 
@@ -26,7 +38,7 @@ List the discoverable skills:
 npx skills@1.5.20 add . --list
 ```
 
-Install the RAG skill for supported agents:
+Install the local checkout for supported agents:
 
 ```bash
 npx skills@1.5.20 add . \
@@ -34,9 +46,8 @@ npx skills@1.5.20 add . \
   --agent codex claude-code opencode antigravity
 ```
 
-After the repository is public, replace `.` with its GitHub `owner/repository`
-identifier. The same public source becomes discoverable through
-[skills.sh](https://skills.sh/).
+The public source becomes visible through [skills.sh](https://skills.sh/) after
+the directory's indexing cycle processes the repository.
 
 ## Validate
 

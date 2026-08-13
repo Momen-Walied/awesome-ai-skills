@@ -137,9 +137,12 @@ remains unchanged unless a tested correctness fix is reverted with it.
 - PASS: `skills@1.5.20` discovers exactly one skill from the repository.
 - PASS: A temporary copy install succeeds for Codex, Claude Code, OpenCode,
   and Antigravity.
+- PASS: Hosted CI passes its Python 3.11, Python 3.12, and Skills CLI discovery
+  jobs on GitHub Actions.
+- PASS: Skills CLI clones the public GitHub source and discovers exactly one
+  skill.
 - PASS: The behavior corpus contains 12 valid cases: eight positive and four
   negative.
 - PASS: Git is initialized locally on `main`.
-- REMAINING: Python 3.11 and hosted CI execute after the first GitHub push.
 - REMAINING: Cross-model behavioral scores need outputs from the target agents;
   installation compatibility alone does not prove behavioral parity.
