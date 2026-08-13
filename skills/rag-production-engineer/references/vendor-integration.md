@@ -73,6 +73,81 @@ Do not switch embedding providers at query time unless the index contains the
 matching embedding space. A model fallback can also change answer quality,
 latency, citations, and safety behavior, so evaluate it as a separate release.
 
+## Run a state-correct migration
+
+Treat a large index migration as an ordered state-replication problem, not a
+bulk copy. Define one authoritative source, take a reproducible snapshot or
+checkpoint, and record its change-stream watermark. Start change capture before
+or at that watermark, backfill snapshot records, replay later mutations in
+version order, then reconcile before any user-visible cutover.
+
+Every mutation must carry a stable tenant, document, chunk, and source version.
+Use idempotency keys and conditional writes so an older backfill record cannot
+overwrite a newer live update. Represent deletes and permission revocations as
+versioned tombstones until every target acknowledges them. Define propagation
+objectives separately for content freshness and authorization revocation;
+security-sensitive revocations normally require the stricter objective.
+
+Prefer backfill from the source of truth. Use a vendor export only after proving
+that it preserves identifiers, versions, source lineage, content, embedding
+metadata, ACL state, and deletes. Reconcile counts by tenant and version, sample
+record hashes, missing and extra identifiers, tombstones, and authorization
+decisions. A global chunk count alone cannot prove convergence.
+
+When vendor ACL semantics differ, resolve authorization into a canonical policy
+decision, then compile that decision through one adapter per vendor. Do not pass
+Vendor B filters to Vendor A or reuse a least-common-denominator filter. Apply a
+defense-in-depth authorization check before context assembly, and test both
+leakage and over-filtering. Deny retrieval when policy state or the selected
+index's authorization watermark is stale.
+
+Keep the old vendor hot only while it receives ordered mutations and meets the
+same data and policy freshness gates. After dual-write stops, label the old
+index retention-only; it is no longer a zero-data-loss failback. Separate the
+hot failback window from the forensic retention and destruction windows.
+
+Budget the fallback path from its own critical path:
+
+```text
+policy resolution
++ primary failure-detection deadline
++ fallback authorization adapter
++ fallback retrieval
++ context assembly
++ generation
++ validation
++ headroom
+```
+
+Measure or label each term. Do not describe an unexplained increment as the
+fallback cost. Bound primary failure detection so the fallback still fits the
+end-to-end deadline, and record the degraded retrieval behavior users receive.
+
+## Separate retrieval and generation cutovers
+
+Changing retrieval and generation in one program does not require changing them
+in one production step. Use independent configuration flags and evaluate the
+crossed combinations: old retrieval with old generation, new retrieval with old
+generation, old retrieval with new generation, and new retrieval with new
+generation. Establish retrieval acceptance before canarying the generation
+change, unless an evidenced compatibility constraint makes separation
+impossible.
+
+Do not compare raw similarity scores across vendors. Inventory every consumer
+of scores, top-k thresholds, confidence cutoffs, and empty-result rules. Prefer
+rank-based comparison during shadowing, then calibrate vendor-specific
+thresholds on labeled data before cutover.
+
+## Account for migration cost
+
+Separate steady-state cost from the migration envelope. The migration budget
+must include source reads or export, backfill writes, optional re-embedding,
+dual storage, dual-write, shadow queries, crossed evaluations, observability,
+egress, and the hot failback window. Show formulas for one-time backfill cost,
+incremental dual-run cost per day, and projected steady-state cost. Keep vendor
+prices and effective throughput `UNKNOWN` until measured or verified from
+first-party sources.
+
 ## Integrate by category
 
 Select current products from verified documentation at implementation time.

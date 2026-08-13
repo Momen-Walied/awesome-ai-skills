@@ -18,7 +18,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.8"
+  version: "0.1.9"
 ---
 
 # RAG production engineer
@@ -62,7 +62,10 @@ Apply these routing rules:
 - For `OPTIMIZE`, preserve the current configuration as the baseline and change
   one meaningful variable at a time.
 - For `MIGRATE`, define compatibility, shadowing or dual-run behavior, cutover,
-  rollback, and old-state retirement.
+  rollback, and old-state retirement. For a provider or index migration, also
+  prove ordered data convergence, authorization equivalence, score-consumer
+  compatibility, bounded fallback freshness, and independent retrieval and
+  generation rollout controls.
 - For `AUDIT`, lead with findings ordered by severity and attach evidence to
   every finding. Do not mutate the system unless the user also requests fixes.
 - For `OPERATE`, protect data and availability first, preserve evidence, then
@@ -201,6 +204,9 @@ FAILURE, AND SECURITY EVIDENCE.
 
 NO MULTI-VENDOR FAILOVER CLAIM WITHOUT COMPATIBLE DATA,
 POLICY, INDEX, AND OUTPUT CONTRACTS.
+
+NO ZERO-DOWNTIME MIGRATION CLAIM WITHOUT A SNAPSHOT WATERMARK,
+ORDERED MUTATIONS, TOMBSTONES, REVOCATION CONVERGENCE, AND RECONCILIATION.
 
 NO CAPACITY, LATENCY, DURATION, OR COST CLAIM WITHOUT EXPLICIT
 UNITS, INPUTS, FORMULA, ASSUMPTIONS, AND A RECOMPUTATION CHECK.

@@ -83,6 +83,22 @@ sufficient architecture.
 Map each current limitation or requirement to the proposed change and its
 evidence gate.
 
+## Compatibility matrix
+
+For `MIGRATE`, compare old and new contracts for embeddings, identifiers and
+versions, filters and ACLs, score semantics and threshold consumers, retrieval
+outputs, generation inputs and outputs, consistency, limits, and regional or
+data-use constraints. Mark every row `COMPATIBLE`, `ADAPTER_REQUIRED`,
+`REINDEX_REQUIRED`, `BLOCKED`, or `UNKNOWN`, with evidence and an owner.
+
+## Migration correctness
+
+For `MIGRATE`, define the source-of-truth snapshot or checkpoint, change-stream
+watermark, per-record version ordering, idempotency keys, tombstones, permission
+revocations, replay, reconciliation, and the freshness gate for every fallback.
+Show separate authorization adapters for each vendor when their filter semantics
+differ. A retained but stale index is not a valid failover.
+
 ## Delivery plan
 
 Break work into independently testable slices. Define inputs, outputs,
@@ -141,6 +157,12 @@ For `P2`, include at least:
 For `P3`, also include:
 
 3. A migration, cutover, fallback, or failure sequence diagram.
+
+For `MIGRATE`, the sequence must show the snapshot/checkpoint, dual-write or
+change capture, ordered backfill, delete and revocation handling, reconciliation,
+shadowing, canary, cutover, fallback, and retirement. Keep retrieval-provider and
+generation-model flags independent. Validate the crossed combinations offline,
+then canary one production axis at a time so regressions remain attributable.
 
 The sequence must represent the observed current state and proposed rollout.
 For greenfield work, use an initial rollout or failure sequence; do not invent a
@@ -221,6 +243,15 @@ Verify these dimensions:
   versioning, and rollback are covered.
 - **Security:** Authorization applies to primary, cache, fallback, and vendor
   paths; sensitive telemetry and data handling are defined.
+- **Migration correctness:** Backfill and live mutations converge from a named
+  checkpoint; version ordering prevents stale overwrite; deletes and permission
+  revocations meet a defined propagation objective; every fallback passes a
+  freshness watermark before serving.
+- **Compatibility:** Embedding dimensions and metric, stable identifiers,
+  filter semantics, score distributions and threshold consumers, and output
+  schemas have explicit evidence or a blocking decision.
+- **Change attribution:** Retrieval and generation changes have separate flags,
+  crossed offline evaluation, and sequential production canaries.
 - **Scale and economics:** Workload, capacity, tail latency, cost, quotas, and
   tenant skew have measurable treatment.
 - **Numerical integrity:** Units, duty cycle, formulas, arithmetic, headroom,

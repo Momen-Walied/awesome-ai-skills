@@ -203,6 +203,54 @@ sequenceDiagram
         errors = plan_document.validate_latency_budget(body)
         self.assertIn("P3 latency budget must reserve positive headroom", errors)
 
+    def test_p3_latency_budget_rejects_multiple_path_totals(self) -> None:
+        body = """
+| Stage | Budget p95 | Notes |
+| --- | --- | --- |
+| Retrieval | 300 ms | Primary path |
+| Primary total | 300 ms | Primary path |
+| Fallback retrieval | 200 ms | Fallback path |
+| Fallback total | 500 ms | Claimed fallback path |
+| Headroom | 100 ms | Variance |
+"""
+        errors = plan_document.validate_latency_budget(body)
+        self.assertTrue(any("separate table" in error for error in errors))
+
+    def test_p3_migration_contract_fixture_is_valid(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        self.assertEqual(plan_document.validate(text, "P3"), [])
+
+    def test_p3_migration_requires_dedicated_contract_sections(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("## Compatibility matrix", "## Provider notes")
+        errors = plan_document.validate(text, "P3")
+        self.assertIn("missing MIGRATE section: Compatibility matrix", errors)
+
+    def test_p3_migration_rejects_missing_watermark_and_score_thresholds(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("watermark", "position")
+        text = text.replace("threshold consumers", "downstream consumers")
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("change-stream watermark" in error for error in errors))
+        self.assertTrue(any("score threshold consumers" in error for error in errors))
+
+    def test_p3_migration_requires_vendor_specific_authorization_adapters(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        correctness = plan_document.heading_body(text, "Migration correctness")
+        self.assertIsNotNone(correctness)
+        errors = plan_document.validate_migration_contracts(
+            text.replace("Vendor\nA ACL adapter", "shared ACL adapter")
+        )
+        self.assertTrue(any("Vendor A authorization adapter" in error for error in errors))
+
+    def test_p3_migration_requires_migration_specific_costs(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("One-time backfill cost", "One-time copy expense")
+        text = text.replace("Incremental dual-run cost", "Incremental overlap expense")
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("one-time backfill cost" in error for error in errors))
+        self.assertTrue(any("incremental dual-run cost" in error for error in errors))
+
 
 class SkillEvaluationTests(unittest.TestCase):
     def test_repository_corpus_is_valid_and_balanced(self) -> None:
@@ -355,6 +403,7 @@ class RepositoryContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("RECOMPUTATION CHECK", text)
         self.assertIn("NO SUBSTITUTE FILES", text)
+        self.assertIn("NO ZERO-DOWNTIME MIGRATION CLAIM", text)
         self.assertIn("workspace mismatch", text)
         self.assertIn("Do not create substitute application artifacts", text)
         self.assertIn("Planning level: P1", text)

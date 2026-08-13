@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the structure of a persistent P2 or P3 RAG plan."""
+"""Validate required contracts in a persistent P2 or P3 RAG plan."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ REQUIRED_SECTIONS = (
     "Plan audit",
 )
 P3_REQUIRED_SECTIONS = ("Capacity, latency, and cost budgets",)
+MIGRATION_REQUIRED_SECTIONS = ("Compatibility matrix", "Migration correctness")
 VALID_STATUSES = {
     "PROPOSED",
     "AWAITING_DECISIONS",
@@ -105,8 +106,13 @@ def validate_latency_budget(body: str) -> list[str]:
     stage_rows = [row for row in rows if "total" not in row[0].lower()]
     if not total_rows:
         errors.append("P3 latency budget table must include a declared total")
+    elif len(total_rows) > 1:
+        errors.append(
+            "P3 latency table must describe one critical path with one total; "
+            "use a separate table for each primary or fallback path"
+        )
     elif stage_rows:
-        declared = total_rows[-1][1]
+        declared = total_rows[0][1]
         calculated = sum(row[1] for row in stage_rows)
         if abs(declared - calculated) > 0.5:
             errors.append(
@@ -126,6 +132,118 @@ def validate_latency_budget(body: str) -> list[str]:
     return errors
 
 
+def validate_migration_contracts(text: str) -> list[str]:
+    errors: list[str] = []
+    compatibility = heading_body(text, "Compatibility matrix") or ""
+    correctness = heading_body(text, "Migration correctness") or ""
+    budgets = heading_body(text, "Capacity, latency, and cost budgets") or ""
+    rollout = heading_body(text, "Rollout and rollback") or ""
+
+    compatibility_checks = (
+        (r"embedding", "embedding model"),
+        (r"dimension", "embedding dimensions"),
+        (r"(?:distance metric|similarity metric)", "distance or similarity metric"),
+        (r"(?:identifier|stable id|document id|chunk id)", "stable identifiers"),
+        (r"(?:ACL|authoriz|filter)", "ACL and filter semantics"),
+        (r"score", "score semantics"),
+        (
+            r"(?:score threshold|threshold consumer|confidence cutoff|consumer[^\n|]*raw score)",
+            "score threshold consumers",
+        ),
+        (
+            r"(?:generation|generator).*(?:schema|output)|"
+            r"(?:schema|output).*(?:generation|generator)",
+            "generation output contract",
+        ),
+    )
+    if compatibility:
+        for pattern, label in compatibility_checks:
+            if not re.search(pattern, compatibility, re.IGNORECASE | re.DOTALL):
+                errors.append(f"MIGRATE compatibility matrix must cover {label}")
+
+    correctness_checks = (
+        (r"source of truth", "an authoritative source of truth"),
+        (r"(?:snapshot|checkpoint)", "a snapshot or checkpoint"),
+        (
+            r"(?:change[- ]stream|change capture|mutation stream)[^\n.]*watermark|"
+            r"watermark[^\n.]*(?:change[- ]stream|change capture|mutation stream)",
+            "a change-stream watermark",
+        ),
+        (r"version.*(?:order|conditional)|(?:order|conditional).*version", "version ordering"),
+        (r"idempoten", "idempotent mutation handling"),
+        (r"tombstone", "versioned tombstones"),
+        (
+            r"(?:permission|ACL|authoriz).*revocation|"
+            r"revocation.*(?:permission|ACL|authoriz)",
+            "permission revocation propagation",
+        ),
+        (r"replay", "mutation replay"),
+        (r"reconcil", "cross-index reconciliation"),
+        (
+            r"fallback.*(?:fresh|watermark|current|consistent)|"
+            r"(?:fresh|watermark|current|consistent).*fallback",
+            "a fallback freshness gate",
+        ),
+    )
+    if correctness:
+        for pattern, label in correctness_checks:
+            if not re.search(pattern, correctness, re.IGNORECASE | re.DOTALL):
+                errors.append(f"MIGRATE correctness must define {label}")
+
+        for vendor in ("Vendor A", "Vendor B"):
+            vendor_pattern = re.escape(vendor).replace(r"\ ", r"\s+")
+            if not re.search(
+                rf"(?:{vendor_pattern}\s+(?:ACL|authorization)\s+adapter|"
+                rf"(?:ACL|authorization)\s+adapter\s+(?:for\s+)?{vendor_pattern})",
+                correctness,
+                re.IGNORECASE,
+            ):
+                errors.append(
+                    "MIGRATE correctness must define a separate "
+                    f"{vendor} authorization adapter"
+                )
+
+    if not re.search(
+        r"(?:retrieval.*generation|generation.*retrieval).*"
+        r"(?:independent|separate).*(?:flag|canar)|"
+        r"(?:independent|separate).*(?:flag|canar).*"
+        r"(?:retrieval.*generation|generation.*retrieval)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        errors.append(
+            "MIGRATE plans must use independent retrieval and generation rollout flags or canaries"
+        )
+    if not re.search(r"crossed|factorial|four combinations", text, re.IGNORECASE):
+        errors.append("MIGRATE plans must evaluate crossed retrieval and generation combinations")
+
+    if not re.search(
+        r"(?:one[- ]time\s+)?backfill\s+cost|"
+        r"cost\s+(?:of|for)\s+(?:the\s+)?backfill",
+        budgets,
+        re.IGNORECASE,
+    ):
+        errors.append("MIGRATE budgets must include one-time backfill cost")
+    if not re.search(
+        r"(?:incremental\s+)?dual[- ]run\s+cost|"
+        r"cost\s+(?:of|for|during)\s+(?:the\s+)?dual[- ]run",
+        budgets,
+        re.IGNORECASE,
+    ):
+        errors.append("MIGRATE budgets must include incremental dual-run cost")
+    if not re.search(
+        r"(?:failure detection|timeout|deadline).*fallback retrieval|"
+        r"fallback retrieval.*(?:failure detection|timeout|deadline)",
+        budgets + "\n" + rollout,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        errors.append(
+            "MIGRATE fallback budget must include primary failure detection and fallback retrieval"
+        )
+
+    return errors
+
+
 def validate(text: str, level: str) -> list[str]:
     errors: list[str] = []
 
@@ -137,6 +255,7 @@ def validate(text: str, level: str) -> list[str]:
             errors.append(f"missing metadata: {key}")
 
     status = metadata_value(text, "Status")
+    mode = metadata_value(text, "Mode")
     if status and status not in VALID_STATUSES:
         errors.append(f"invalid status: {status}")
 
@@ -154,6 +273,14 @@ def validate(text: str, level: str) -> list[str]:
                 errors.append(f"missing P3 section: {section}")
             elif not body:
                 errors.append(f"empty P3 section: {section}")
+
+    if level == "P3" and mode == "MIGRATE":
+        for section in MIGRATION_REQUIRED_SECTIONS:
+            body = heading_body(text, section)
+            if body is None:
+                errors.append(f"missing MIGRATE section: {section}")
+            elif not body:
+                errors.append(f"empty MIGRATE section: {section}")
 
     mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", text, re.DOTALL)
     flowcharts = [block for block in mermaid_blocks if re.search(r"\bflowchart\b", block)]
@@ -218,6 +345,9 @@ def validate(text: str, level: str) -> list[str]:
                 errors.append("P3 budgets must label numerical evidence")
             errors.extend(validate_latency_budget(budget_body))
 
+        if mode == "MIGRATE":
+            errors.extend(validate_migration_contracts(text))
+
     placeholders = sorted(set(PLACEHOLDER_PATTERN.findall(text)))
     if placeholders:
         errors.append("unresolved placeholders: " + ", ".join(placeholders))
@@ -240,7 +370,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"{args.level} plan structure is ready for semantic audit.")
+    print(f"{args.level} plan contract validation passed; ready for semantic audit.")
     return 0
 
 
