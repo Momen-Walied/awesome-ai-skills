@@ -2,20 +2,20 @@
 name: rag-production-engineer
 description: >-
   Design, implement, review, debug, scale, migrate, and operate production
-  retrieval-augmented generation systems. Use for RAG architecture, ingestion,
-  chunking, embeddings, vector or hybrid search, reranking, grounded generation,
+  retrieval-augmented generation systems. Always use this skill for repository
+  work involving a RAG ingestion or retrieval pipeline, including small config
+  and test changes to chunk size, chunk overlap, parsing, embeddings, indexing,
+  vector or hybrid search, reranking, or grounded generation. Also trigger for
   evaluation, tracing, monitoring, latency, cost, fallbacks, security,
-  multi-tenant isolation, large-scale data, or multi-vendor resilience. Trigger
-  for new RAG systems, weak retrieval or answer quality, slow or expensive
-  pipelines, production-readiness reviews, incidents, and vendor selection or
-  migration. Enforce repository inspection, reviewed Markdown plans for
-  substantial work, tracked execution, measurable baselines, phase gates, and
-  fresh verification. Do not use for generic prompting or fine-tuning tasks
-  that do not retrieve external knowledge.
+  multi-tenant isolation, large-scale data, production readiness, incidents,
+  vendor selection, and multi-vendor migration. Enforce repository inspection,
+  proportional reviewed plans, tracked execution, measurable baselines, phase
+  gates, and fresh verification. Do not use for generic prompting or
+  fine-tuning tasks that do not retrieve external knowledge.
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.3"
+  version: "0.1.4"
 ---
 
 # RAG production engineer

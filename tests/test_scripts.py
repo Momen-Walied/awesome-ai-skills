@@ -278,6 +278,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Do not create substitute application artifacts", text)
         self.assertIn("Planning level: P1", text)
 
+    def test_skill_description_pushes_small_rag_config_triggers(self) -> None:
+        text = (
+            ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        frontmatter = text.split("---", 2)[1]
+        self.assertIn("Always use this skill", frontmatter)
+        self.assertIn("small config", frontmatter)
+        self.assertIn("chunk overlap", frontmatter)
+
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
