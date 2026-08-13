@@ -41,6 +41,17 @@ flowchart LR
 
 Connect each measured failure or requirement to one justified change.
 
+## Compatibility matrix
+
+For migrations, compare old and new data, embedding, authorization, score,
+output, consistency, limit, and regional contracts. Record evidence and owner.
+
+## Migration correctness
+
+For migrations, define the source checkpoint, atomic change capture, capture
+barrier, ordering, idempotency, tombstones, revocations, replay,
+reconciliation, fallback freshness, and the condition that blocks cutover.
+
 ## Delivery plan
 
 Define independently verifiable slices with dependencies and completion gates.
@@ -51,8 +62,17 @@ Specify datasets, slices, metrics, thresholds, and regression limits.
 
 ## Capacity, latency, and cost budgets
 
-Show labeled workload conversions, capacity ranges, a critical-path latency
-budget with headroom, and cost formulas or explicit unknown inputs.
+Show labeled workload conversions, capacity ranges, and cost formulas or
+explicit unknown inputs. Use one table per user-visible critical path:
+
+| Stage | Budget p95 (ms) | Evidence / formula |
+| --- | --- | --- |
+| Authorized retrieval | UNKNOWN | Measure at the stated load shape |
+| Generation | UNKNOWN | Measure with the selected model and token range |
+| Headroom | PROPOSED: 20% of measured stage subtotal | `headroom = 0.20 * stage_subtotal` |
+| Total | UNKNOWN | `total = stage_subtotal + headroom` |
+
+Keep unknown values symbolic. Do not invent numeric placeholders.
 
 ## Operability
 

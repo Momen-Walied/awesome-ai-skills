@@ -105,7 +105,7 @@ def duration_ms(value: str, default_unit: str | None = None) -> float | None:
 def validate_latency_budget(body: str) -> list[str]:
     errors: list[str] = []
     lines = body.splitlines()
-    tables: list[tuple[str, list[tuple[str, float, str]]]] = []
+    tables: list[tuple[str, list[tuple[str, str, float | None, str]]]] = []
 
     for index, line in enumerate(lines):
         if not line.lstrip().startswith("|"):
@@ -113,6 +113,11 @@ def validate_latency_budget(body: str) -> list[str]:
         headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
         if len(headers) < 2 or "stage" not in headers[0] or "budget" not in headers[1]:
             continue
+        if sum("budget" in header for header in headers[1:]) > 1:
+            errors.append(
+                "P3 latency tables must use one critical percentile per table; "
+                "use separate tables instead of p50, p95, and p99 budget columns"
+            )
         default_unit = None
         if re.search(r"\bms\b|milliseconds?", headers[1]):
             default_unit = "ms"
@@ -120,10 +125,11 @@ def validate_latency_budget(body: str) -> list[str]:
             default_unit = "s"
         label = f"table {len(tables) + 1}"
         for prior in reversed(lines[:index]):
-            if prior.startswith("### "):
-                label = prior.removeprefix("### ").strip()
+            heading = re.match(r"^#{3,6}\s+(.+)$", prior)
+            if heading:
+                label = heading.group(1).strip()
                 break
-        rows: list[tuple[str, float, str]] = []
+        rows: list[tuple[str, str, float | None, str]] = []
         for row in lines[index + 2 :]:
             if not row.lstrip().startswith("|"):
                 break
@@ -131,8 +137,14 @@ def validate_latency_budget(body: str) -> list[str]:
             if len(cells) < 2:
                 continue
             value = duration_ms(cells[1], default_unit)
-            if value is not None:
-                rows.append((cells[0].replace("**", ""), value, " ".join(cells[2:])))
+            rows.append(
+                (
+                    cells[0].replace("**", ""),
+                    cells[1].replace("**", ""),
+                    value,
+                    " ".join(cells[2:]),
+                )
+            )
         tables.append((label, rows))
 
     if not tables:
@@ -152,20 +164,60 @@ def validate_latency_budget(body: str) -> list[str]:
                 "use a separate table for each primary or fallback path"
             )
         elif stage_rows:
-            declared = total_rows[0][1]
-            calculated = sum(row[1] for row in stage_rows)
-            if abs(declared - calculated) > 0.5:
+            total = total_rows[0]
+            unknown_stages = [row for row in stage_rows if row[2] is None]
+            if total[2] is not None and unknown_stages:
                 errors.append(
-                    f"{prefix} total does not match its stage budgets: "
-                    f"declared {declared:g} ms, calculated {calculated:g} ms"
+                    f"{prefix} cannot declare a numeric total while stage "
+                    "budgets remain symbolic or UNKNOWN"
+                )
+            elif total[2] is not None:
+                declared = total[2]
+                calculated = sum(row[2] or 0 for row in stage_rows)
+                if abs(declared - calculated) > 0.5:
+                    errors.append(
+                        f"{prefix} total does not match its stage budgets: "
+                        f"declared {declared:g} ms, calculated {calculated:g} ms"
+                    )
+            elif not re.search(
+                r"(?:=|sum|subtotal).*headroom|headroom.*(?:=|sum|subtotal)",
+                total[1] + " " + total[3],
+                re.IGNORECASE,
+            ):
+                errors.append(
+                    f"{prefix} symbolic total must provide a recomputable "
+                    "stage-subtotal-plus-headroom formula"
                 )
 
-        if not any("headroom" in row[0].lower() and row[1] > 0 for row in stage_rows):
+        headroom_rows = [row for row in stage_rows if "headroom" in row[0].lower()]
+        has_positive_headroom = any(
+            (row[2] is not None and row[2] > 0)
+            or bool(
+                re.search(
+                    r"(?:[1-9][0-9]*(?:\.[0-9]+)?\s*%|"
+                    r"0?\.[0-9]*[1-9][0-9]*\s*\*\s*(?:stage[_ ]?)?subtotal)",
+                    row[1] + " " + row[3],
+                    re.IGNORECASE,
+                )
+            )
+            for row in headroom_rows
+        )
+        if not has_positive_headroom:
             errors.append(f"{prefix} must reserve positive headroom")
 
         if any(
+            row[2] is not None
+            and re.search(r"placeholder", row[1] + " " + row[3], re.IGNORECASE)
+            for row in headroom_rows
+        ):
+            errors.append(
+                f"{prefix} must not invent a numeric headroom placeholder; "
+                "use measured evidence or a symbolic positive formula"
+            )
+
+        if any(
             re.search(
-                r"\b(?:concurrent(?:ly)?|parallel)\s+with\b", row[2], re.IGNORECASE
+                r"\b(?:concurrent(?:ly)?|parallel)\s+with\b", row[3], re.IGNORECASE
             )
             for row in stage_rows
         ):
@@ -192,6 +244,22 @@ def validate_decision_table(body: str) -> list[str]:
         "AWAITING_DECISIONS plans require a decision table with Decision, "
         "Recommendation, Alternatives, and Impact columns"
     ]
+
+
+def has_owner_decision_blocker(text: str) -> bool:
+    return bool(
+        re.search(
+            r"(?:owner|user|stakeholder|business|security|platform)"
+            r"[^.\n]{0,60}(?:decision|input|confirmation|approval)|"
+            r"(?:decision|input|confirmation|approval)"
+            r"[^.\n]{0,60}(?:owner|user|stakeholder|business|security|platform)|"
+            r"decisions?\s+(?:that\s+)?(?:require|need|await)"
+            r"[^.\n]{0,40}(?:input|answer|confirmation|approval)|"
+            r"decisions?\s+[^.\n]{0,40}(?:must be answered|are answered)",
+            text,
+            re.IGNORECASE,
+        )
+    )
 
 
 def validate_security_language(text: str) -> list[str]:
@@ -224,6 +292,64 @@ def validate_budget_assumptions(body: str) -> list[str]:
                 "an invented peak ratio"
             )
             break
+    return errors
+
+
+def validate_zero_downtime_without_cdc(text: str) -> list[str]:
+    if not re.search(r"zero[- ]downtime|zero\s+customer[- ]facing\s+downtime", text, re.IGNORECASE):
+        return []
+    if not re.search(
+        r"(?:no|without|lacks?|absent|none)[^\n.]{0,80}"
+        r"(?:CDC|change data capture|mutation log|change stream|watermark)|"
+        r"(?:CDC|change data capture|mutation log|change stream|watermark)"
+        r"[^\n.]{0,50}(?:does not exist|unavailable|absent|none)",
+        text,
+        re.IGNORECASE,
+    ):
+        return []
+
+    errors: list[str] = []
+    if not re.search(
+        r"transactional\s+outbox|"
+        r"(?:same|single)\s+(?:database\s+)?transaction[^.\n]{0,100}"
+        r"(?:outbox|journal|event)|"
+        r"(?:outbox|journal|event)[^.\n]{0,100}"
+        r"(?:same|single)\s+(?:database\s+)?transaction|"
+        r"atomically[^.\n]{0,100}(?:source|business)\s+mutation",
+        text,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            "zero-downtime migration without source CDC requires atomic "
+            "source-mutation capture, such as a transactional outbox"
+        )
+
+    if not re.search(
+        r"(?:start|enable|activate|establish)[^.\n]{0,80}"
+        r"(?:capture|outbox|journal)[^.\n]{0,80}before[^.\n]{0,80}"
+        r"(?:snapshot|backfill)|"
+        r"(?:capture|outbox|journal)[^.\n]{0,80}(?:active|enabled)"
+        r"[^.\n]{0,80}before[^.\n]{0,80}(?:snapshot|backfill)",
+        text,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            "zero-downtime migration without source CDC must activate ordered "
+            "capture before the bootstrap snapshot or backfill"
+        )
+
+    if not re.search(
+        r"(?:bypass|uncontrolled|direct|legacy|admin|background)[^.\n]{0,140}"
+        r"(?:block|cannot|impossible|unprovable|write freeze|guarantee breaks)|"
+        r"(?:block|cannot|impossible|unprovable|write freeze|guarantee breaks)"
+        r"[^.\n]{0,140}(?:bypass|uncontrolled|direct|legacy|admin|background)",
+        text,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            "zero-downtime migration without source CDC must block cutover or "
+            "require an approved write freeze when any writer bypasses capture"
+        )
     return errors
 
 
@@ -493,7 +619,9 @@ def validate(text: str, level: str) -> list[str]:
     }:
         errors.append("Status must reflect a READY audit result")
 
-    has_open_decisions = bool(
+    has_open_decisions = has_owner_decision_blocker(
+        risks_body + "\n" + audit_body
+    ) or bool(
         re.search(
             r"\b(?:AWAITING_DECISIONS|open decisions?|blocking decisions?|"
             r"decisions? required from)\b",
@@ -541,6 +669,7 @@ def validate(text: str, level: str) -> list[str]:
 
         if mode == "MIGRATE":
             errors.extend(validate_migration_contracts(text))
+            errors.extend(validate_zero_downtime_without_cdc(text))
             rollout_body = heading_body(text, "Rollout and rollback") or ""
             errors.extend(validate_rollout_windows(rollout_body))
 

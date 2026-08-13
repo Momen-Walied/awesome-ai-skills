@@ -236,6 +236,30 @@ Resolve the owner decision before moving the plan to READY.
 """
         self.assertEqual(plan_document.validate_latency_budget(body), [])
 
+    def test_p3_latency_budget_accepts_symbolic_unknowns(self) -> None:
+        body = """
+| Stage | Budget p95 (ms) | Evidence / formula |
+| --- | --- | --- |
+| Retrieval | UNKNOWN | Measure at production load shape |
+| Generation | UNKNOWN | Measure with the selected model |
+| Headroom | PROPOSED: 20% of measured stage subtotal | headroom = 0.20 * stage_subtotal |
+| Total | UNKNOWN | total = stage_subtotal + headroom |
+"""
+        self.assertEqual(plan_document.validate_latency_budget(body), [])
+
+    def test_p3_latency_budget_rejects_multiple_percentiles_and_placeholders(self) -> None:
+        body = """
+| Stage | Budget p50 (ms) | Budget p95 (ms) | Notes |
+| --- | --- | --- | --- |
+| Retrieval | UNKNOWN | UNKNOWN | Measure later |
+| Headroom | 50 ms | 50 ms | PROPOSED placeholder |
+| Total | 50 ms | UNKNOWN | Claimed total |
+"""
+        errors = plan_document.validate_latency_budget(body)
+        self.assertTrue(any("one critical percentile" in error for error in errors))
+        self.assertTrue(any("numeric total" in error for error in errors))
+        self.assertTrue(any("numeric headroom placeholder" in error for error in errors))
+
     def test_p3_latency_budget_validates_every_path_table(self) -> None:
         body = """
 ### Primary path
@@ -350,6 +374,16 @@ Resolve the owner decision before moving the plan to READY.
         errors = plan_document.validate(text, "P3")
         self.assertTrue(any("owner input" in error for error in errors))
 
+    def test_owner_decision_blocker_wording_requires_awaiting_decisions(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("**Status:** AWAITING_DECISIONS", "**Status:** PROPOSED")
+        text = text.replace(
+            "**Result:** AWAITING_DECISIONS",
+            "**Result:** FAIL (semantic audit blocked by owner decisions)",
+        )
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("owner input" in error for error in errors))
+
     def test_awaiting_decisions_requires_recommendations_and_impacts(self) -> None:
         text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
         text = text.replace("| Decision | Recommendation | Alternatives | Impact |", "Questions:")
@@ -364,6 +398,26 @@ Demote Vendor A to read-only failover.
         errors = plan_document.validate_security_language(text)
         self.assertTrue(any("fail closed" in error for error in errors))
         self.assertTrue(any("cannot serve as failover" in error for error in errors))
+
+    def test_no_cdc_zero_downtime_requires_atomic_capture_and_barrier(self) -> None:
+        text = """
+Zero-downtime migration is required, but the source has no CDC or mutation log.
+An IndexRouter writes to an independent journal after each source mutation.
+Uncontrolled admin writers make the zero-loss guarantee unprovable.
+"""
+        errors = plan_document.validate_zero_downtime_without_cdc(text)
+        self.assertTrue(any("atomic source-mutation capture" in error for error in errors))
+        self.assertTrue(any("before the bootstrap snapshot" in error for error in errors))
+
+    def test_no_cdc_zero_downtime_accepts_transactional_capture_boundary(self) -> None:
+        text = """
+Zero-downtime migration is required, but the source has no CDC or mutation log.
+Commit each source mutation and transactional outbox event in the same transaction.
+Activate outbox capture before the bootstrap snapshot, then replay from its barrier.
+Any admin or background writer that bypasses capture blocks cutover unless the owner
+approves a bounded write freeze.
+"""
+        self.assertEqual(plan_document.validate_zero_downtime_without_cdc(text), [])
 
     def test_backfill_formula_can_follow_its_label_in_a_code_block(self) -> None:
         text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")

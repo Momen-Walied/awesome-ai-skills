@@ -94,3 +94,12 @@ traffic when useful, then switch through a reversible alias or configuration.
 Do not mix incompatible embedding spaces in one searchable field. Use dual
 writes only for a bounded migration window and monitor divergence. Retain the
 previous version until rollback and citation reproducibility requirements pass.
+
+When a source has no CDC, don't infer zero-loss changes from periodic snapshots.
+Write the business mutation and its outbox event in the same transaction, or use
+an equivalent atomic source boundary. Activate that capture before the bootstrap
+snapshot so mutations during extraction and backfill have an ordered replay
+position. Route background jobs, admin tools, and integrations through the same
+boundary. If any path can bypass it, require a bounded write freeze or classify
+zero-downtime cutover as blocked. Capture hard deletes and permission
+revocations as durable versioned events before source state disappears.

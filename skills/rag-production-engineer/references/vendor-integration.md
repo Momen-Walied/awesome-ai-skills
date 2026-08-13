@@ -81,6 +81,15 @@ checkpoint, and record its change-stream watermark. Start change capture before
 or at that watermark, backfill snapshot records, replay later mutations in
 version order, then reconcile before any user-visible cutover.
 
+If the source provides snapshots but no ordered change stream, establish an
+atomic capture boundary first. Prefer a transactional outbox committed with the
+source mutation. Start capture before the bootstrap snapshot and replay from the
+barrier recorded for that snapshot. A journal written independently after the
+source mutation can lose events during crashes and does not prove zero downtime.
+Audit every writer, including batch jobs and administrative paths. An
+uncontrolled writer blocks zero-loss cutover unless the owner approves a write
+freeze that covers snapshot completion and replay convergence.
+
 Every mutation must carry a stable tenant, document, chunk, and source version.
 Use idempotency keys and conditional writes so an older backfill record cannot
 overwrite a newer live update. Represent deletes and permission revocations as

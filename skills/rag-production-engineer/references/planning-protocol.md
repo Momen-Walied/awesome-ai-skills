@@ -106,6 +106,17 @@ revocations, replay, reconciliation, and the freshness gate for every fallback.
 Show separate authorization adapters for each vendor when their filter semantics
 differ. A retained but stale index is not a valid failover.
 
+When the source has no CDC or mutation log, state the feasibility boundary
+before designing the migration. Couple the source mutation and ordered event
+atomically with a transactional outbox or an equivalent durable boundary. Start
+capture before taking or loading the bootstrap snapshot, then replay from the
+recorded barrier. A synthetic sequence assigned after an unobserved source write
+does not close the gap. If any job, admin tool, or integration can bypass the
+capture boundary, mark zero-loss cutover blocked until that path is routed
+through capture or the owner approves a bounded write freeze. Treat the snapshot
+as bootstrap evidence, never as a substitute for live delete and revocation
+capture.
+
 ## Delivery plan
 
 Break work into independently testable slices. Define inputs, outputs,
@@ -128,6 +139,12 @@ Link every exact vendor price to a first-party source with date, region, plan,
 and SKU; do not average a regional price range into a fictional midpoint.
 Use one latency table per user-visible path and validate every table, including
 primary, fallback, degraded, and timeout paths.
+
+Use one critical percentile, normally p95, in each latency table. Put `Stage`
+in the first column and `Budget p95 (ms)` in the second. If measurements are not
+available, keep stage values `UNKNOWN`, express headroom as a positive formula
+such as `20% of measured stage subtotal`, and express the total as `stage
+subtotal + headroom`. Do not invent numeric placeholders to satisfy validation.
 
 ## Operability
 

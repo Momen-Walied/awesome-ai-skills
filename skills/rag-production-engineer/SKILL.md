@@ -18,7 +18,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.11"
+  version: "0.1.12"
 ---
 
 # RAG production engineer
@@ -178,7 +178,9 @@ For `P3`, include a dedicated `Capacity, latency, and cost budgets` section.
 Normalize workload rates across time units, show formulas and units, reserve
 latency headroom, and label every non-user-provided input. Use sensitivity
 ranges when traffic shape, throughput, token volume, or price is unknown. Keep
-the document status and plan-audit result identical.
+`AWAITING_DECISIONS` and `READY` identical between document status and audit
+result. Use `PROPOSED` with audit result `FAIL` only while planner-fixable
+defects remain.
 
 Use `assets/rag-plan-template.md` when the repository has no stronger planning
 template. Replace every `UNKNOWN` that can be discovered before validation.
@@ -209,8 +211,13 @@ FAILURE, AND SECURITY EVIDENCE.
 NO MULTI-VENDOR FAILOVER CLAIM WITHOUT COMPATIBLE DATA,
 POLICY, INDEX, AND OUTPUT CONTRACTS.
 
-NO ZERO-DOWNTIME MIGRATION CLAIM WITHOUT A SNAPSHOT WATERMARK,
-ORDERED MUTATIONS, TOMBSTONES, REVOCATION CONVERGENCE, AND RECONCILIATION.
+NO ZERO-DOWNTIME MIGRATION CLAIM WITHOUT ATOMIC SOURCE-MUTATION CAPTURE,
+AN ORDERED DURABLE JOURNAL ACTIVE BEFORE THE SNAPSHOT, TOMBSTONES,
+REVOCATION CONVERGENCE, RECONCILIATION, AND CONTROL OF EVERY WRITE PATH.
+
+WHEN THE SOURCE HAS NO CDC, REQUIRE A TRANSACTIONAL OUTBOX OR AN EQUIVALENT
+ATOMIC BOUNDARY. IF ANY WRITE PATH CAN BYPASS IT, ZERO-LOSS CUTOVER IS BLOCKED
+UNLESS THE OWNER APPROVES A BOUNDED WRITE FREEZE.
 
 NO CAPACITY, LATENCY, DURATION, OR COST CLAIM WITHOUT EXPLICIT
 UNITS, INPUTS, FORMULA, ASSUMPTIONS, AND A RECOMPUTATION CHECK.
