@@ -52,6 +52,10 @@ CASE_COMMANDS = {
         "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
         "inspect_diff": "git diff --stat",
     },
+    "top-down-rag-implementation": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- rag_service tests specs .specify",
+    },
 }
 
 

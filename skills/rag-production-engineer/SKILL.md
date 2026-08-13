@@ -1,24 +1,21 @@
 ---
 name: rag-production-engineer
 description: >-
-  MANDATORY: invoke this skill before any repository or reference tool call for
-  production RAG work. Design, implement, review, debug, scale, migrate, and
-  operate RAG systems. Always use it for repository work involving RAG ingestion
-  or retrieval, including small config and test changes to chunk size,
-  chunk overlap, parsing, embeddings, indexing, hybrid search, reranking, or
-  grounded generation. Load it before
-  repository exploration, planning, or edits. After invocation, the next visible
-  work update must start with mode, then
-  planning level, and execution ledger before explanatory prose. Also trigger
-  for evaluation, tracing, monitoring, latency, cost, fallbacks, security,
-  multi-tenancy, large-scale data, incidents, vendor selection, and multi-vendor
-  migration. Enforce inspection, reviewed plans, tracked execution, measurable
-  baselines, phase gates, and fresh verification. Do not use for prompting or
-  fine-tuning tasks without external retrieval.
+  Design, implement, review, debug, optimize, migrate, and operate production
+  RAG systems. Use for repository work involving ingestion, parsing, chunking,
+  embeddings, indexes, retrieval, reranking, grounded generation, citations,
+  evaluation, tracing, monitoring, latency, cost, fallbacks, ACLs,
+  multi-tenancy, large data, incidents, and vendor migrations. Analyze existing
+  implementations top-down, derive failure scenarios, make verified code
+  changes, and continue from plans into implementation when requested. Compose
+  with repository instructions, Spec Kit, OpenSpec, other skills, MCP tools,
+  hooks, and native agent orchestration instead of replacing them. Keep small
+  changes small and high-risk changes evidence-gated. Do not use for prompting
+  or fine-tuning tasks without external retrieval.
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.13"
+  version: "0.2.0"
 ---
 
 # RAG production engineer
@@ -29,16 +26,21 @@ modes, tracked tasks, evidence gates, and bounded fallbacks. Leave every answer
 and design decision explainable. The instructions are portable across Agent
 Skills clients. Bundled Python utilities require Python 3.11 or newer.
 
-## Run the mandatory preflight
+## Adapt to the host
 
-Before any repository inspection, reference read, delegated task, or other tool
-call, publish `Mode: <MODE>`, `Planning level: P0|P1|P2|P3`, and the execution
-ledger required by the scope. This preflight is the first work update, not a
-summary added after exploration.
+Read [agent-interoperability.md](references/agent-interoperability.md) for
+nontrivial repository work. Detect existing instructions, specifications,
+skills, tools, task state, and approval boundaries. Use native host mechanisms
+and avoid duplicating artifacts or requiring one product's command syntax.
+When code execution is available, locate this skill's installed directory and
+run its bundled `scripts/inspect_workspace.py <root>` as a fast inventory. Do
+not resolve that script relative to the target repository. Verify its signals
+by reading the relevant files.
 
-After the skill invocation, make the next visible work update begin with these
-literal lines, in this order: `Mode:`, `Planning level:`, and `Execution
-ledger:`. Do not place routing prose or the ledger before those declarations.
+Select a mode and planning level before substantial work. Report them in a
+compact progress update when the host supports updates. When an orchestrator
+already tracks equivalent state, update that state instead of printing a
+second ritualized header.
 
 ## Route the task
 
@@ -77,36 +79,23 @@ Apply these routing rules:
 
 ## Control execution
 
-For any task with three or more meaningful actions, create a task-specific
-execution ledger before starting. Use the host agent's native todo or plan tool
-when available; otherwise maintain a compact Markdown checklist.
-
-Begin the first work update with `Mode: <MODE>` and one sentence explaining the
-route. Create the ledger immediately after that line and before substantive
-analysis. In a response-only environment with no separate progress updates,
-make `Mode` and `Execution ledger` the first two sections of the response.
-An action list written after the analysis does not satisfy this requirement.
+For any task with three or more meaningful actions, create task state using the
+host's native plan, todo, or spec workflow. Use a compact Markdown ledger only
+when no native state exists.
 
 Follow this state protocol:
 
-1. State the selected mode and its required result.
-2. Create four to eight outcome-oriented tasks with explicit completion
-   criteria.
-3. Mark exactly one task `in_progress`.
-4. Perform the task and collect its required artifact or command output.
-5. Compare the evidence with the completion criterion.
-6. Mark the task `completed` only when the criterion passes.
-7. Update status immediately. Never batch-complete tasks at the end.
-8. Add a new task when evidence reveals necessary work outside the ledger.
+1. Track outcome-oriented tasks with completion evidence.
+2. Keep at most one implementation task in progress per editing surface.
+3. Update state when evidence changes scope or invalidates an assumption.
+4. Mark completion only after the relevant artifact or command passes.
 
 Do not copy the full RAG lifecycle into every ledger. Track only the phases the
 selected mode and scope require. Skip the ledger for a short factual answer
 that needs fewer than three actions.
 
-Before the final response, close the ledger with evidence for every completed
-item. Keep blocked or deferred items open and name the missing decision or
-failed gate. In a response-only task, include this closed ledger in the final
-response so execution remains auditable.
+Before the final response, reconcile task state with evidence. Keep blocked or
+deferred items open and name the missing decision or failed gate.
 
 Use this fallback format when the host has no task tool:
 
@@ -144,11 +133,8 @@ blast radius, uncertainty, and reversibility.
 | `P2` | Cross-component or production behavior change | Reviewed Markdown plan |
 | `P3` | Migration, high-risk, large-scale, or multi-vendor program | Staged Markdown plan |
 
-For `P1`, put `Mode: <MODE>` and `Planning level: P1` in the first work update,
-followed by a concise proposed plan before editing. When the task has three
-actions such as locate, update, and verify, use those actions as the execution
-ledger. Do not replace these declarations with a retrospective summary because
-the change appears trivial.
+For `P1`, use a concise locate-change-verify plan. Do not create a persistent
+architecture document for a bounded local change.
 
 Any requested repository mutation starts at `P1`, including a one-line value
 change. Never downgrade config plus focused-test work to `P0` because the
@@ -178,8 +164,8 @@ For `P2` and `P3`, read
 6. Ask the user only for unresolved high-impact decisions. Include your
    recommendation and the consequence of each option.
 7. Revise the plan and mark assumptions, decisions, and open questions.
-8. Save the final Markdown plan using the repository's planning convention, or
-   `docs/plans/YYYY-MM-DD-<slug>.md` when no convention exists.
+8. Update the active repository spec or plan. Use
+   `docs/plans/YYYY-MM-DD-<slug>.md` only when no planning framework exists.
 9. Run `scripts/validate_plan_document.py <plan.md> --level P2|P3` and resolve
    every structural failure before marking the plan `READY`.
 
@@ -272,6 +258,11 @@ Return to an earlier phase whenever its evidence becomes invalid.
 
 Inspect the existing system before recommending products or changes. Identify
 the user outcome and the cost of a wrong, incomplete, stale, or slow answer.
+For implementation, debugging, optimization, and migration, read
+[execution-protocol.md](references/execution-protocol.md) and build the bounded
+top-down map it defines. Trace real entry points and call sites across query,
+data, and control paths. Derive scenarios that can falsify the requested
+behavior before choosing a solution.
 
 When the requested application file, configuration, or test is absent after a
 repository-wide search, report a workspace mismatch and stop that implementation
@@ -384,6 +375,12 @@ migration. For `DESIGN`, define interfaces, data contracts, stages, ownership,
 budgets, rollout, and measurable acceptance gates. For `AUDIT`, record findings
 without expanding into an unsolicited redesign.
 
+When working code was requested, follow the vertical-slice loop in
+[execution-protocol.md](references/execution-protocol.md): reproduce, edit,
+test, instrument where appropriate, run broader verification, and exercise the
+relevant failure or rollback path. A completed plan is an input to this loop,
+not a reason to stop before implementation.
+
 For a machine-checkable design, create JSON matching the plan contract in
 [architecture.md](references/architecture.md), then run
 `scripts/validate_rag_plan.py`.
@@ -452,10 +449,9 @@ plausible fixes.
 
 Match the final format to the selected mode and keep evidence near each claim.
 
-Start every nontrivial final response with the selected mode and a closed
-execution ledger. Then present the mode-specific result below. Omit the ledger
-only for a short factual answer that qualified for the execution-control
-exception.
+Use the host's normal final-response conventions. Report the selected mode only
+when it helps explain scope. Summarize task evidence without duplicating a
+native plan or todo display.
 
 For `DESIGN` or `MIGRATE`, include:
 

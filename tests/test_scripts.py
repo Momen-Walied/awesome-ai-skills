@@ -48,6 +48,10 @@ skill_evals = load_module("run_skill_evals", ROOT / "scripts" / "run_skill_evals
 eval_workspace = load_module(
     "prepare_eval_workspace", ROOT / "scripts" / "prepare_eval_workspace.py"
 )
+workspace_inspector = load_module(
+    "inspect_workspace",
+    ROOT / "skills" / "rag-production-engineer" / "scripts" / "inspect_workspace.py",
+)
 
 
 class RetrievalEvaluationTests(unittest.TestCase):
@@ -70,6 +74,35 @@ class RetrievalEvaluationTests(unittest.TestCase):
             path.write_text("[]\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "root must be an object"):
                 retrieval.load_cases(path)
+
+
+class WorkspaceInspectionTests(unittest.TestCase):
+    def test_detects_agent_workflow_and_test_signals(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").write_text("Run tests.\n", encoding="utf-8")
+            (root / "services" / "api").mkdir(parents=True)
+            (root / "services" / "api" / "CLAUDE.md").write_text(
+                "Use API conventions.\n", encoding="utf-8"
+            )
+            (root / "node_modules" / "dependency").mkdir(parents=True)
+            (root / "node_modules" / "dependency" / "AGENTS.md").write_text(
+                "Ignore dependency instructions.\n", encoding="utf-8"
+            )
+            (root / ".specify" / "memory").mkdir(parents=True)
+            (root / ".agents" / "skills").mkdir(parents=True)
+            (root / "tests").mkdir()
+            (root / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
+
+            report = workspace_inspector.inspect(root)
+
+        self.assertEqual(
+            report["instructions"], ["AGENTS.md", "services/api/CLAUDE.md"]
+        )
+        self.assertEqual(report["workflows"], {"spec-kit": [".specify"]})
+        self.assertEqual(report["skill_roots"], [".agents/skills"])
+        self.assertEqual(report["manifests"], ["pyproject.toml"])
+        self.assertEqual(report["test_and_eval_roots"], ["tests"])
 
 
 class TraceAnalysisTests(unittest.TestCase):
@@ -680,22 +713,21 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Do not convert unavailable owner decisions", text)
         self.assertIn("workspace mismatch", text)
         self.assertIn("Do not create substitute application artifacts", text)
-        self.assertIn("Planning level: P1", text)
+        self.assertIn("Any requested repository mutation starts at `P1`", text)
         self.assertIn("Capacity, latency, and cost budgets", text)
         self.assertIn("structural validator pass means only", text)
-        self.assertIn("next visible work update", text)
+        self.assertIn("avoid duplicating artifacts", text)
 
     def test_skill_description_pushes_small_rag_config_triggers(self) -> None:
         text = (
             ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
         ).read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
-        self.assertIn("MANDATORY: invoke this skill", frontmatter)
-        self.assertIn("Always use it", frontmatter)
-        self.assertIn("small config", frontmatter)
-        self.assertIn("chunk overlap", frontmatter)
-        self.assertIn("before\n  repository exploration", frontmatter)
-        self.assertIn("planning level, and execution ledger", frontmatter)
+        self.assertIn("implement", frontmatter)
+        self.assertIn("chunking", frontmatter)
+        self.assertIn("Analyze existing", frontmatter)
+        self.assertIn("Spec Kit", frontmatter)
+        self.assertIn("MCP tools", frontmatter)
 
     def test_any_repository_mutation_starts_at_p1(self) -> None:
         text = (
@@ -706,6 +738,40 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("config plus focused-test work", text)
         self.assertIn("Do not delegate", text)
         self.assertIn("additional speculative searches add latency", text)
+
+    def test_skill_defines_top_down_execution_and_host_composition(self) -> None:
+        skill_root = ROOT / "skills" / "rag-production-engineer"
+        execution = (skill_root / "references" / "execution-protocol.md").read_text(
+            encoding="utf-8"
+        )
+        interop = (
+            skill_root / "references" / "agent-interoperability.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Build a top-down system model", execution)
+        self.assertIn("Implement a vertical slice", execution)
+        self.assertIn("Do not stop after producing a plan", execution)
+        self.assertIn("Compose instead of competing", interop)
+        self.assertIn("Spec Kit", interop)
+        self.assertIn("Use tools by capability", interop)
+        self.assertIn("unknown agent", interop)
+
+        skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("locate this skill's installed directory", skill)
+        self.assertRegex(skill, r"Do\s+not resolve that script relative")
+
+        evaluation = (ROOT / "evals" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Avoid benchmark overfitting", evaluation)
+        self.assertIn("Workspace fixtures", evaluation)
+        self.assertIn("Cross-agent matrix", evaluation)
+
+        results = json.loads(
+            (ROOT / "evals" / "records" / "v0.2.0-cross-agent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(results["case_id"], "top-down-rag-implementation")
+        self.assertEqual(len(results["runs"]), 2)
+        self.assertTrue(all(run["verification"]["passed"] for run in results["runs"]))
 
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
@@ -818,6 +884,33 @@ class EvaluationWorkspaceTests(unittest.TestCase):
                 check=False,
             )
         self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_top_down_implementation_fixture_has_executable_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "workspace"
+            result = eval_workspace.prepare_workspace(
+                "top-down-rag-implementation", output
+            )
+            baseline = subprocess.run(
+                ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            status = subprocess.run(
+                ["git", "status", "--short"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(status.stdout, "")
+            self.assertNotEqual(baseline.returncode, 0)
+            self.assertIn("test_exact_sku_prefers", baseline.stderr)
+            self.assertTrue((output / ".specify" / "memory" / "constitution.md").is_file())
+            self.assertIn("unittest", result["verify"])
+            self.assertIn("Do not stop after planning", result["prompt"])
 
     def test_workspace_setup_rejects_nonempty_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

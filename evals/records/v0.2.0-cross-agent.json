@@ -1,0 +1,75 @@
+{
+  "release": "0.2.0",
+  "recorded_at": "2026-08-13",
+  "case_id": "top-down-rag-implementation",
+  "outcome_contract": [
+    "trace the current query path top-down",
+    "honor the active Spec Kit scenarios",
+    "implement behind the existing feature flag",
+    "preserve tenant isolation",
+    "preserve dense rollback",
+    "record the selected retrieval strategy",
+    "pass the executable acceptance suite"
+  ],
+  "runs": [
+    {
+      "host": "Codex CLI",
+      "host_version": "0.147.0-alpha.6.5",
+      "model": "gpt-5.5",
+      "installation_root": ".agents/skills",
+      "automatic_trigger": true,
+      "existing_workflow_detected": "Spec Kit",
+      "implementation": {
+        "changed_files": [
+          "rag_service/retrieval.py",
+          "rag_service/service.py",
+          "tests/test_service.py"
+        ],
+        "insertions": 51,
+        "deletions": 4
+      },
+      "verification": {
+        "command": "python3 -m unittest discover -s tests -v",
+        "passed": true,
+        "tests_passed": 3
+      },
+      "token_usage": 59387,
+      "review": "Correct policy-first implementation with a bounded exact-SKU retriever, explicit trace attributes, and preserved rollback. The reported token use is high and remains an efficiency signal, not a release blocker for correctness."
+    },
+    {
+      "host": "OpenCode",
+      "host_version": "1.18.15",
+      "model": "kimi-k2.7-code",
+      "installation_root": ".opencode/skills",
+      "automatic_trigger": true,
+      "existing_workflow_detected": "Spec Kit",
+      "implementation": {
+        "changed_files": [
+          "rag_service/retrieval.py",
+          "rag_service/service.py"
+        ],
+        "insertions": 26,
+        "deletions": 1
+      },
+      "verification": {
+        "command": "python3 -m unittest discover -s tests -v",
+        "passed": true,
+        "tests_passed": 3
+      },
+      "token_usage": null,
+      "review": "Correct policy-first implementation with a literal exact-match route, trace attributes, and preserved dense fallback. It exposed an ambiguous bundled-script path, which was fixed generically in the skill."
+    }
+  ],
+  "release_findings": [
+    {
+      "finding": "A bundled script path could be resolved against the target repository instead of the installed skill directory.",
+      "scope": "cross-host instruction portability",
+      "resolution": "The core instruction now requires locating the installed skill directory before executing the bundled script."
+    },
+    {
+      "finding": "Codex reported high token usage for the case.",
+      "scope": "efficiency",
+      "resolution": "Retained as a measured signal for progressive-disclosure optimization; no model-specific instruction was added."
+    }
+  ]
+}
