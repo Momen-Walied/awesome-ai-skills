@@ -1,0 +1,5 @@
+Project: Greenfield production RAG platform
+
+Status: No application, data pipeline, index, infrastructure, or operational
+deployment exists yet. This repository is the planning workspace for the new
+system.

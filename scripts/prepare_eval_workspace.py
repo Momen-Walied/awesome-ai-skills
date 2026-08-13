@@ -16,6 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "evals" / "cases.jsonl"
 FIXTURES = ROOT / "evals" / "fixtures"
 CASE_COMMANDS = {
+    "greenfield-production-design": {
+        "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
+        "inspect_diff": "git diff --stat",
+    },
     "bounded-chunk-config": {
         "verify": "python3 -m unittest discover -s tests -v",
         "inspect_diff": "git diff -- app/config.py tests/test_config.py",

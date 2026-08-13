@@ -316,6 +316,25 @@ class RepositoryContractTests(unittest.TestCase):
 
 
 class EvaluationWorkspaceTests(unittest.TestCase):
+    def test_greenfield_design_fixture_has_no_implementation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "workspace"
+            result = eval_workspace.prepare_workspace(
+                "greenfield-production-design", output
+            )
+            status = subprocess.run(
+                ["git", "status", "--short"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            context = (output / "PROJECT.txt").read_text(encoding="utf-8")
+            self.assertEqual(status.stdout, "")
+            self.assertIn("No application", context)
+            self.assertFalse((output / "app").exists())
+            self.assertIn("docs/plans", result["verify"])
+
     def test_bounded_change_fixture_is_runnable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "workspace"
