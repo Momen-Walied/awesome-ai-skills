@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/rag/retrieval-evaluation.schema.json",
+  "title": "RAG retrieval evaluation row",
+  "type": "object",
+  "required": ["relevant_ids", "retrieved_ids"],
+  "properties": {
+    "query_id": {"type": ["string", "number"]},
+    "query_class": {"type": "string"},
+    "relevant_ids": {
+      "type": "array",
+      "items": {"type": ["string", "number"]},
+      "uniqueItems": true
+    },
+    "retrieved_ids": {
+      "type": "array",
+      "items": {"type": ["string", "number"]}
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "RAG and retrieval",
+      "description": "Skills for measurable, secure, and operable RAG systems.",
+      "skills": ["rag-production-engineer"]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/rag/trace-span.schema.json",
+  "title": "RAG trace span export row",
+  "type": "object",
+  "required": ["name", "duration_ms"],
+  "properties": {
+    "trace_id": {"type": "string"},
+    "span_id": {"type": "string"},
+    "name": {"type": "string", "minLength": 1},
+    "duration_ms": {"type": "number", "minimum": 0},
+    "status": {"type": "string"},
+    "cost_usd": {"type": "number", "minimum": 0},
+    "fallback": {"type": "string"}
+  },
+  "additionalProperties": true
+}

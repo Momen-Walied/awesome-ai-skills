@@ -1,0 +1,42 @@
+name: Validate skills
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: agentskills validate skills/rag-production-engineer
+      - run: python -m unittest discover -s tests -v
+      - run: >-
+          python -m py_compile
+          scripts/run_skill_evals.py
+          skills/rag-production-engineer/scripts/*.py
+      - run: >-
+          python scripts/run_skill_evals.py
+          evals/cases.jsonl
+          --validate-only
+
+  discovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes skills@1.5.20 add . --list

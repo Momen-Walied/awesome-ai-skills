@@ -1,0 +1,2 @@
+{"query_id":"q-1","query_class":"exact","relevant_ids":["doc-a","doc-c"],"retrieved_ids":["doc-a","doc-b","doc-c"]}
+{"query_id":"q-2","query_class":"semantic","relevant_ids":["doc-d"],"retrieved_ids":["doc-x","doc-d"]}

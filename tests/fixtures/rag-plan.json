@@ -1,0 +1,14 @@
+{
+  "use_case": {"outcome": "Grounded support answers"},
+  "workload": {"qps": 25},
+  "architecture": {"level": "hybrid-rag"},
+  "ingestion": {"strategy": "idempotent"},
+  "retrieval": {"top_k": 20},
+  "generation": {"citations": true},
+  "evaluation": {"dataset": "support-v1"},
+  "observability": {"traces": true},
+  "reliability": {"fallback": "abstain"},
+  "security": {"authorization": "pre-filter"},
+  "vendors": {"boundary": "search-adapter"},
+  "rollout": {"strategy": "shadow"}
+}

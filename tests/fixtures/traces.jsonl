@@ -1,0 +1,3 @@
+{"trace_id":"t-1","name":"retrieve","duration_ms":10,"status":"ok","cost_usd":0.001}
+{"trace_id":"t-1","name":"generate","duration_ms":100,"status":"error","cost_usd":0.02,"fallback":"cached-answer"}
+{"trace_id":"t-2","name":"retrieve","duration_ms":20,"status":"success","cost_usd":0.002}

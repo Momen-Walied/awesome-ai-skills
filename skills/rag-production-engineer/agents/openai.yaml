@@ -1,0 +1,4 @@
+interface:
+  display_name: "RAG Production Engineer"
+  short_description: "Plan and execute production RAG with evidence"
+  default_prompt: "Use $rag-production-engineer to inspect, plan, audit, and execute this RAG work with diagrams, tracked tasks, measurable gates, and fresh verification."

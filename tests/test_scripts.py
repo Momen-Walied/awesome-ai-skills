@@ -1,0 +1,225 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import math
+import re
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from types import ModuleType
+
+
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = ROOT / "tests" / "fixtures"
+
+
+def load_module(name: str, path: Path) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+retrieval = load_module(
+    "evaluate_retrieval",
+    ROOT / "skills" / "rag-production-engineer" / "scripts" / "evaluate_retrieval.py",
+)
+traces = load_module(
+    "analyze_traces",
+    ROOT / "skills" / "rag-production-engineer" / "scripts" / "analyze_traces.py",
+)
+rag_plan = load_module(
+    "validate_rag_plan",
+    ROOT / "skills" / "rag-production-engineer" / "scripts" / "validate_rag_plan.py",
+)
+plan_document = load_module(
+    "validate_plan_document",
+    ROOT
+    / "skills"
+    / "rag-production-engineer"
+    / "scripts"
+    / "validate_plan_document.py",
+)
+skill_evals = load_module("run_skill_evals", ROOT / "scripts" / "run_skill_evals.py")
+
+
+class RetrievalEvaluationTests(unittest.TestCase):
+    def test_fixture_loads_and_slices(self) -> None:
+        cases = retrieval.load_cases(FIXTURES / "retrieval-results.jsonl")
+        report = retrieval.summarize(cases, [1, 3])
+        self.assertEqual(report["cases"], 2)
+        self.assertEqual(report["metrics"]["1"]["recall"], 0.25)
+
+    def test_duplicate_results_do_not_inflate_metrics(self) -> None:
+        case = {"relevant_ids": ["doc-a"], "retrieved_ids": ["doc-a", "doc-a"]}
+        metrics = retrieval.metrics_at_k(case, 2)
+        self.assertEqual(metrics["precision"], 0.5)
+        self.assertEqual(metrics["recall"], 1.0)
+        self.assertEqual(metrics["ndcg"], 1.0)
+
+    def test_non_object_case_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cases.jsonl"
+            path.write_text("[]\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "root must be an object"):
+                retrieval.load_cases(path)
+
+
+class TraceAnalysisTests(unittest.TestCase):
+    def test_fixture_summary_includes_errors_cost_and_fallbacks(self) -> None:
+        spans = traces.load_spans(FIXTURES / "traces.jsonl")
+        report = traces.summarize(spans)
+        self.assertEqual(report["count"], 3)
+        self.assertAlmostEqual(report["error_rate"], 1 / 3, places=6)
+        self.assertEqual(report["cost_usd"], 0.023)
+        self.assertEqual(report["fallbacks"], {"cached-answer": 1})
+
+    def test_invalid_numeric_values_are_rejected(self) -> None:
+        invalid_values = (-1, True, math.inf)
+        for value in invalid_values:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "traces.jsonl"
+                path.write_text(
+                    json.dumps({"name": "retrieve", "duration_ms": value}) + "\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "finite and non-negative"):
+                    traces.load_spans(path)
+
+    def test_non_numeric_cost_is_rejected_during_load(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "traces.jsonl"
+            path.write_text(
+                '{"name":"generate","duration_ms":10,"cost_usd":"unknown"}\n',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cost_usd"):
+                traces.load_spans(path)
+
+
+class PlanValidationTests(unittest.TestCase):
+    def test_machine_readable_plan_fixture_is_valid(self) -> None:
+        plan = json.loads((FIXTURES / "rag-plan.json").read_text(encoding="utf-8"))
+        self.assertEqual(rag_plan.validate(plan), [])
+
+    def test_machine_readable_plan_reports_missing_sections(self) -> None:
+        errors = rag_plan.validate({"use_case": {"status": "unknown"}})
+        self.assertIn("missing section: workload", errors)
+
+    def test_approved_p2_document_is_valid(self) -> None:
+        text = (FIXTURES / "p2-plan.md").read_text(encoding="utf-8")
+        self.assertEqual(plan_document.validate(text, "P2"), [])
+
+    def test_p3_document_requires_sequence_diagram(self) -> None:
+        text = (FIXTURES / "p2-plan.md").read_text(encoding="utf-8")
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("sequence diagram" in error for error in errors))
+
+
+class SkillEvaluationTests(unittest.TestCase):
+    def test_repository_corpus_is_valid_and_balanced(self) -> None:
+        cases = skill_evals.load_jsonl(ROOT / "evals" / "cases.jsonl", "cases")
+        self.assertEqual(skill_evals.validate_cases(cases), [])
+        self.assertGreaterEqual(sum(case["should_trigger"] for case in cases), 8)
+        self.assertGreaterEqual(sum(not case["should_trigger"] for case in cases), 4)
+
+    def test_matching_result_passes_all_checks(self) -> None:
+        case = {
+            "id": "migration",
+            "prompt": "Migrate a RAG vendor.",
+            "should_trigger": True,
+            "expected_mode": "MIGRATE",
+            "expected_plan_level": "P3",
+            "required_signals": {"rollback": ["rollback"]},
+            "forbidden_signals": {"false-completion": ["already deployed"]},
+        }
+        result = {
+            "case_id": "migration",
+            "triggered": True,
+            "response": "Mode: MIGRATE. Planning level P3. Define rollback first.",
+        }
+        report = skill_evals.score_case(case, result)
+        self.assertEqual(report["score"], 1.0)
+        self.assertEqual(report["failures"], [])
+
+    def test_missing_result_is_reported(self) -> None:
+        indexed, errors = skill_evals.validate_results([], {"required-case"})
+        self.assertEqual(indexed, {})
+        self.assertIn("missing result for case_id required-case", errors)
+
+    def test_cli_returns_distinct_status_for_pass_and_failure(self) -> None:
+        case = {
+            "id": "design",
+            "prompt": "Design a production RAG system.",
+            "should_trigger": True,
+            "expected_mode": "DESIGN",
+            "expected_plan_level": "P2",
+            "required_signals": {"evaluation": ["evaluation"]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            case_path = root / "cases.jsonl"
+            pass_path = root / "pass.jsonl"
+            fail_path = root / "fail.jsonl"
+            case_path.write_text(json.dumps(case) + "\n", encoding="utf-8")
+            pass_path.write_text(
+                json.dumps(
+                    {
+                        "case_id": "design",
+                        "triggered": True,
+                        "response": "Mode: DESIGN. Use a P2 evaluation plan.",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            fail_path.write_text(
+                json.dumps(
+                    {"case_id": "design", "triggered": False, "response": ""}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            command = [
+                "python3",
+                str(ROOT / "scripts" / "run_skill_evals.py"),
+                str(case_path),
+                "--results",
+            ]
+            passing = subprocess.run(
+                command + [str(pass_path)], capture_output=True, text=True, check=False
+            )
+            failing = subprocess.run(
+                command + [str(fail_path)], capture_output=True, text=True, check=False
+            )
+        self.assertEqual(passing.returncode, 0, passing.stderr)
+        self.assertEqual(failing.returncode, 1, failing.stderr)
+
+
+class RepositoryContractTests(unittest.TestCase):
+    def test_skill_stays_within_progressive_disclosure_limit(self) -> None:
+        skill = ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
+        self.assertLessEqual(len(skill.read_text(encoding="utf-8").splitlines()), 500)
+
+    def test_skill_relative_file_references_exist(self) -> None:
+        skill_root = ROOT / "skills" / "rag-production-engineer"
+        text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        references = re.findall(r"(?:\(|`)\s*((?:assets|references|scripts)/[^)`\s]+)", text)
+        self.assertGreater(len(references), 10)
+        missing = [path for path in references if not (skill_root / path).exists()]
+        self.assertEqual(missing, [])
+
+    def test_json_assets_are_valid(self) -> None:
+        asset_root = ROOT / "skills" / "rag-production-engineer" / "assets"
+        for path in asset_root.glob("*.json"):
+            with self.subTest(path=path.name):
+                value = json.loads(path.read_text(encoding="utf-8"))
+                self.assertIsInstance(value, dict)
+
+
+if __name__ == "__main__":
+    unittest.main()
