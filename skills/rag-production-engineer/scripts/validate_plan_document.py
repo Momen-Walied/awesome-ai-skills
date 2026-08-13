@@ -38,6 +38,10 @@ PLACEHOLDER_PATTERN = re.compile(
     r"\b(?:TODO|TBD|FIXME|FILL[ -]?ME|IMPLEMENT LATER)\b|<[^>\n]+>",
     re.IGNORECASE,
 )
+DURATION_PATTERN = re.compile(
+    r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(ms|milliseconds?|s|seconds?)\b",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,6 +63,67 @@ def heading_body(text: str, heading: str) -> str | None:
 def metadata_value(text: str, key: str) -> str | None:
     match = re.search(rf"^\*\*{re.escape(key)}:\*\*\s*(.+)$", text, re.MULTILINE)
     return match.group(1).strip() if match else None
+
+
+def duration_ms(value: str) -> float | None:
+    match = DURATION_PATTERN.search(value.replace("**", ""))
+    if not match:
+        return None
+    number = float(match.group(1).replace(",", ""))
+    unit = match.group(2).lower()
+    return number if unit == "ms" or unit.startswith("millisecond") else number * 1000
+
+
+def validate_latency_budget(body: str) -> list[str]:
+    errors: list[str] = []
+    lines = body.splitlines()
+    rows: list[tuple[str, float, str]] = []
+    found_table = False
+
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            continue
+        headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
+        if len(headers) < 2 or "stage" not in headers[0] or "budget" not in headers[1]:
+            continue
+        found_table = True
+        for row in lines[index + 2 :]:
+            if not row.lstrip().startswith("|"):
+                break
+            cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+            if len(cells) < 2:
+                continue
+            value = duration_ms(cells[1])
+            if value is not None:
+                rows.append((cells[0].replace("**", ""), value, " ".join(cells[2:])))
+        break
+
+    if not found_table:
+        return ["P3 budgets must include a stage latency budget table"]
+
+    total_rows = [row for row in rows if "total" in row[0].lower()]
+    stage_rows = [row for row in rows if "total" not in row[0].lower()]
+    if not total_rows:
+        errors.append("P3 latency budget table must include a declared total")
+    elif stage_rows:
+        declared = total_rows[-1][1]
+        calculated = sum(row[1] for row in stage_rows)
+        if abs(declared - calculated) > 0.5:
+            errors.append(
+                "P3 latency total does not match its stage budgets: "
+                f"declared {declared:g} ms, calculated {calculated:g} ms"
+            )
+
+    if not any("headroom" in row[0].lower() and row[1] > 0 for row in stage_rows):
+        errors.append("P3 latency budget must reserve positive headroom")
+
+    if any("concurrent" in row[2].lower() for row in stage_rows):
+        errors.append(
+            "P3 latency table must combine concurrent branches into one "
+            "critical-path row"
+        )
+
+    return errors
 
 
 def validate(text: str, level: str) -> list[str]:
@@ -151,6 +216,7 @@ def validate(text: str, level: str) -> list[str]:
                 r"\b(?:MEASURED|ESTIMATED|PROPOSED|UNKNOWN)\b", budget_body
             ):
                 errors.append("P3 budgets must label numerical evidence")
+            errors.extend(validate_latency_budget(budget_body))
 
     placeholders = sorted(set(PLACEHOLDER_PATTERN.findall(text)))
     if placeholders:

@@ -5,6 +5,10 @@ and migration work. Produce a durable plan that explains the present system,
 the intended system, the smallest justified delta, and how evidence controls
 delivery.
 
+Before reading further, confirm the first work update already states the mode,
+planning level, and execution ledger. If it does not, stop and publish that
+preflight before inspecting more files or delegating work.
+
 ## Choose the plan status
 
 Place one explicit status near the top of the document.
@@ -93,6 +97,12 @@ failure exercises, and comparison method.
 
 Show workload conversions, capacity assumptions, critical-path latency by
 stage with headroom, cost formulas, sensitivity ranges, and evidence labels.
+Represent parallel stages as one critical-path row using the slower branch;
+never add concurrent branch budgets as if they run sequentially. Recompute every
+declared table total. If traffic duty cycle, peak ratio, or vendor throughput is
+not user-provided or measured, keep it `UNKNOWN` and show sensitivity cases.
+Link every exact vendor price to a first-party source with date, region, plan,
+and SKU; do not average a regional price range into a fictional midpoint.
 
 ## Operability
 

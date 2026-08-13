@@ -1,8 +1,9 @@
 ---
 name: rag-production-engineer
 description: >-
-  Design, implement, review, debug, scale, migrate, and operate production
-  retrieval-augmented generation systems. Always use this skill for repository
+  MANDATORY: invoke this skill before any repository or reference tool call for
+  production retrieval-augmented generation work. Design, implement, review,
+  debug, scale, migrate, and operate RAG systems. Always use it for repository
   work involving a RAG ingestion or retrieval pipeline, including small config
   and test changes to chunk size, chunk overlap, parsing, embeddings, indexing,
   vector or hybrid search, reranking, or grounded generation. Load it before
@@ -17,7 +18,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.7"
+  version: "0.1.8"
 ---
 
 # RAG production engineer

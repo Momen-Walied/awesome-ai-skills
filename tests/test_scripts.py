@@ -143,9 +143,14 @@ sequenceDiagram
             "## Operability",
             """## Capacity, latency, and cost budgets
 
-PROPOSED: 100 QPS. Latency budget = 900 milliseconds plus 100 milliseconds
-headroom. Cost formula: monthly USD = queries per second * duty cycle * unit
-cost; unit cost is UNKNOWN.
+PROPOSED: 100 QPS. Cost formula: monthly USD = queries per second * duty cycle
+* unit cost; unit cost is UNKNOWN.
+
+| Stage | Budget p95 | Notes |
+| --- | --- | --- |
+| Authorized retrieval | 800 milliseconds | Critical path |
+| Headroom | 200 milliseconds | Queueing and variance |
+| Total | 1,000 milliseconds | Recomputed total |
 
 ## Operability""",
         )
@@ -174,6 +179,29 @@ sequenceDiagram
         )
         errors = plan_document.validate(text, "P2")
         self.assertTrue(any("Status must be AWAITING_DECISIONS" in error for error in errors))
+
+    def test_p3_latency_budget_rejects_bad_total_and_parallel_rows(self) -> None:
+        body = """
+| Stage | Budget p95 | Notes |
+| --- | --- | --- |
+| Dense | 250 ms | Concurrent with lexical |
+| Lexical | 100 ms | Concurrent with dense |
+| Headroom | 130 ms | Variance |
+| Total | 470 ms | Claimed total |
+"""
+        errors = plan_document.validate_latency_budget(body)
+        self.assertTrue(any("declared 470 ms, calculated 480 ms" in error for error in errors))
+        self.assertTrue(any("combine concurrent branches" in error for error in errors))
+
+    def test_p3_latency_budget_requires_positive_headroom(self) -> None:
+        body = """
+| Stage | Budget p95 | Notes |
+| --- | --- | --- |
+| Retrieval | 300 ms | Critical path |
+| Total | 300 ms | Recomputed total |
+"""
+        errors = plan_document.validate_latency_budget(body)
+        self.assertIn("P3 latency budget must reserve positive headroom", errors)
 
 
 class SkillEvaluationTests(unittest.TestCase):
@@ -338,7 +366,8 @@ class RepositoryContractTests(unittest.TestCase):
             ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
         ).read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
-        self.assertIn("Always use this skill", frontmatter)
+        self.assertIn("MANDATORY: invoke this skill", frontmatter)
+        self.assertIn("Always use it", frontmatter)
         self.assertIn("small config", frontmatter)
         self.assertIn("chunk overlap", frontmatter)
         self.assertIn("before\n  repository exploration", frontmatter)

@@ -92,6 +92,12 @@ limits are unknown. Treat zero headroom as a failed capacity gate, not a viable
 steady-state plan. When exact vendor prices materially affect a decision, use
 current first-party pricing and record the source date.
 
+For managed services, record the billed data-size definition, region, plan,
+rate limits, and whether index overhead is included in billable storage. For
+self-managed services, do not publish a currency estimate without instance or
+node counts, CPU, memory, disk, replicas, utilization, and unit prices. Use
+`UNKNOWN` plus the sizing formula when those inputs are unavailable.
+
 Include source extraction, embedding, index storage and operations, reranking,
 model input and output tokens, observability, network transfer, replicas, and
 engineering operations.
