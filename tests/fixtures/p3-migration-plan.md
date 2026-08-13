@@ -137,8 +137,12 @@ fallback latency budget. Keep retrieval and generation flags independent.
 
 ## Risks and decisions
 
-AWAITING_DECISIONS for embedding compatibility, ACL differences, throughput,
-cutover thresholds, and the dual-run ceiling.
+The plan is AWAITING_DECISIONS for unavailable owner input.
+
+| Decision | Recommendation | Alternatives | Impact |
+| --- | --- | --- | --- |
+| Embedding compatibility | Reuse measured-compatible vectors | Re-embed into a versioned index | Re-embedding changes cost, duration, and quality baselines |
+| ACL capability gap | Require semantic equivalence before cutover | Abort Vendor B migration | Unsupported filters can leak or over-filter tenant data |
 
 ## Plan audit
 

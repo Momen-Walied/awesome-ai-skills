@@ -18,7 +18,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.10"
+  version: "0.1.11"
 ---
 
 # RAG production engineer
@@ -225,6 +225,9 @@ Apply these rules throughout the task:
   separate dimensions. Never hide one behind an aggregate score.
 - Put access control before or inside every retrieval path. Deny by default
   when authorization metadata is missing, malformed, or stale.
+- Never fail open on authorization, tenant isolation, permission revocation, or
+  cross-tenant leakage. A stale or retention-only index cannot serve fallback
+  traffic.
 - Preserve stable source, document, chunk, tenant, and version identifiers from
   ingestion through citations, evaluations, and traces.
 - Instrument a stage before optimizing it. Report p50, p95, and p99 instead of

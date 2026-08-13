@@ -1,0 +1,6 @@
+Current migration constraint
+
+- The source provides one nightly snapshot.
+- No ordered CDC stream, outbox, mutation log, or source watermark exists.
+- Writes, updates, deletes, and permission revocations continue during migration.
+- Zero downtime and zero lost mutations are required.

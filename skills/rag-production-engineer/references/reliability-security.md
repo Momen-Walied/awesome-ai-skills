@@ -32,6 +32,11 @@ Fallbacks must preserve authorization, citation, freshness, and output-schema
 contracts. A fast fallback that answers from unauthorized or unsupported
 content is not a valid fallback.
 
+Never describe an authorization incident response as fail-open. Fail closed on
+missing, malformed, stale, or divergent policy state. After an index stops
+receiving ordered content and permission mutations, classify it as
+retention-only and remove it from the fallback ladder.
+
 Record fallback reason, selected path, quality limitations, and user-visible
 degradation. Test each fallback under load.
 

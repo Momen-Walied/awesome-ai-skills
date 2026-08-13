@@ -22,6 +22,9 @@ Place one explicit status near the top of the document.
 - `SUPERSEDED` means a newer plan replaces this document.
 
 Do not infer `APPROVED` from silence or from a successful structural audit.
+Use `FAIL` as the plan-audit result only when the document still has a defect
+the planner can fix. Use `AWAITING_DECISIONS` when unavailable owner input is
+the only blocker; don't disguise that state as `PROPOSED` plus `FAIL`.
 
 ## Resolve facts before asking
 
@@ -39,6 +42,10 @@ Ask a clarification question only when an `UNKNOWN` can materially change
 scope, architecture, security, data contracts, service-level objectives, cost,
 or rollout. For every question, include the recommended answer, alternatives,
 and impact. Group independent questions into one concise round.
+
+For an `AWAITING_DECISIONS` plan, record those fields in a decision table with
+`Decision`, `Recommendation`, `Alternatives`, and `Impact` columns. A bare list
+of questions transfers analysis to the user and is not decision-ready.
 
 ## Build the document
 
@@ -119,6 +126,8 @@ declared table total. If traffic duty cycle, peak ratio, or vendor throughput is
 not user-provided or measured, keep it `UNKNOWN` and show sensitivity cases.
 Link every exact vendor price to a first-party source with date, region, plan,
 and SKU; do not average a regional price range into a fictional midpoint.
+Use one latency table per user-visible path and validate every table, including
+primary, fallback, degraded, and timeout paths.
 
 ## Operability
 

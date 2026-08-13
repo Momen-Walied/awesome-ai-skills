@@ -64,7 +64,11 @@ Specify exposure stages, stop conditions, rollback, and old-state cleanup.
 
 ## Risks and decisions
 
-Record decisions, unresolved high-impact questions, and residual risks.
+Record residual risks, then make unavailable owner input decision-ready:
+
+| Decision | Recommendation | Alternatives | Impact |
+| --- | --- | --- | --- |
+| Name the decision | Recommend one option | List viable options | Explain how each option changes the plan |
 
 ## Plan audit
 

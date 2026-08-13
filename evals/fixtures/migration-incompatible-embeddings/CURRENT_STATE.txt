@@ -1,0 +1,7 @@
+Current migration constraint
+
+- Vendor A serves 80 million chunks with 1,536-dimensional dot-product vectors.
+- Vendor B requires 3,072-dimensional cosine vectors.
+- Vendor B cannot import or query the current embedding space.
+- Production downtime is not acceptable.
+- Current quality baselines, re-embedding throughput, and budget are unknown.

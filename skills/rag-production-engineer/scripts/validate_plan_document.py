@@ -85,20 +85,27 @@ def audit_result(body: str) -> str | None:
     return None
 
 
-def duration_ms(value: str) -> float | None:
+def duration_ms(value: str, default_unit: str | None = None) -> float | None:
     match = DURATION_PATTERN.search(value.replace("**", ""))
-    if not match:
-        return None
-    number = float(match.group(1).replace(",", ""))
-    unit = match.group(2).lower()
+    if match:
+        number = float(match.group(1).replace(",", ""))
+        unit = match.group(2).lower()
+    else:
+        number_match = re.fullmatch(
+            r"\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*",
+            value.replace("**", "").replace("`", ""),
+        )
+        if not number_match or default_unit is None:
+            return None
+        number = float(number_match.group(1).replace(",", ""))
+        unit = default_unit
     return number if unit == "ms" or unit.startswith("millisecond") else number * 1000
 
 
 def validate_latency_budget(body: str) -> list[str]:
     errors: list[str] = []
     lines = body.splitlines()
-    rows: list[tuple[str, float, str]] = []
-    found_table = False
+    tables: list[tuple[str, list[tuple[str, float, str]]]] = []
 
     for index, line in enumerate(lines):
         if not line.lstrip().startswith("|"):
@@ -106,51 +113,105 @@ def validate_latency_budget(body: str) -> list[str]:
         headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
         if len(headers) < 2 or "stage" not in headers[0] or "budget" not in headers[1]:
             continue
-        found_table = True
+        default_unit = None
+        if re.search(r"\bms\b|milliseconds?", headers[1]):
+            default_unit = "ms"
+        elif re.search(r"\bseconds?\b|\(s\)", headers[1]):
+            default_unit = "s"
+        label = f"table {len(tables) + 1}"
+        for prior in reversed(lines[:index]):
+            if prior.startswith("### "):
+                label = prior.removeprefix("### ").strip()
+                break
+        rows: list[tuple[str, float, str]] = []
         for row in lines[index + 2 :]:
             if not row.lstrip().startswith("|"):
                 break
             cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
             if len(cells) < 2:
                 continue
-            value = duration_ms(cells[1])
+            value = duration_ms(cells[1], default_unit)
             if value is not None:
                 rows.append((cells[0].replace("**", ""), value, " ".join(cells[2:])))
-        break
+        tables.append((label, rows))
 
-    if not found_table:
+    if not tables:
         return ["P3 budgets must include a stage latency budget table"]
 
-    total_rows = [row for row in rows if "total" in row[0].lower()]
-    stage_rows = [row for row in rows if "total" not in row[0].lower()]
-    if not total_rows:
-        errors.append("P3 latency budget table must include a declared total")
-    elif len(total_rows) > 1:
-        errors.append(
-            "P3 latency table must describe one critical path with one total; "
-            "use a separate table for each primary or fallback path"
-        )
-    elif stage_rows:
-        declared = total_rows[0][1]
-        calculated = sum(row[1] for row in stage_rows)
-        if abs(declared - calculated) > 0.5:
+    for label, rows in tables:
+        prefix = "P3 latency budget"
+        if len(tables) > 1:
+            prefix += f" '{label}'"
+        total_rows = [row for row in rows if "total" in row[0].lower()]
+        stage_rows = [row for row in rows if "total" not in row[0].lower()]
+        if not total_rows:
+            errors.append(f"{prefix} must include a declared total")
+        elif len(total_rows) > 1:
             errors.append(
-                "P3 latency total does not match its stage budgets: "
-                f"declared {declared:g} ms, calculated {calculated:g} ms"
+                f"{prefix} must describe one critical path with one total; "
+                "use a separate table for each primary or fallback path"
+            )
+        elif stage_rows:
+            declared = total_rows[0][1]
+            calculated = sum(row[1] for row in stage_rows)
+            if abs(declared - calculated) > 0.5:
+                errors.append(
+                    f"{prefix} total does not match its stage budgets: "
+                    f"declared {declared:g} ms, calculated {calculated:g} ms"
+                )
+
+        if not any("headroom" in row[0].lower() and row[1] > 0 for row in stage_rows):
+            errors.append(f"{prefix} must reserve positive headroom")
+
+        if any(
+            re.search(
+                r"\b(?:concurrent(?:ly)?|parallel)\s+with\b", row[2], re.IGNORECASE
+            )
+            for row in stage_rows
+        ):
+            errors.append(
+                f"{prefix} must combine concurrent branches into one "
+                "critical-path row"
             )
 
-    if not any("headroom" in row[0].lower() and row[1] > 0 for row in stage_rows):
-        errors.append("P3 latency budget must reserve positive headroom")
+    return errors
 
-    if any(
-        re.search(r"\b(?:concurrent(?:ly)?|parallel)\s+with\b", row[2], re.IGNORECASE)
-        for row in stage_rows
-    ):
-        errors.append(
-            "P3 latency table must combine concurrent branches into one "
-            "critical-path row"
-        )
 
+def validate_decision_table(body: str) -> list[str]:
+    for line in body.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
+        has_decision = any("decision" in cell or "question" in cell for cell in headers)
+        has_recommendation = any("recommend" in cell for cell in headers)
+        has_alternatives = any("alternative" in cell or "option" in cell for cell in headers)
+        has_impact = any("impact" in cell or "consequence" in cell for cell in headers)
+        if has_decision and has_recommendation and has_alternatives and has_impact:
+            return []
+    return [
+        "AWAITING_DECISIONS plans require a decision table with Decision, "
+        "Recommendation, Alternatives, and Impact columns"
+    ]
+
+
+def validate_security_language(text: str) -> list[str]:
+    errors: list[str] = []
+    for line in text.splitlines():
+        if re.search(r"fail[- ]?open", line, re.IGNORECASE) and re.search(
+            r"auth|ACL|tenant|permission|policy|unauthorized|deny", line, re.IGNORECASE
+        ):
+            errors.append("authorization and tenant-isolation failures must fail closed")
+            break
+
+    for line in text.splitlines():
+        if re.search(
+            r"(?:read[- ]only|retention[- ]only).*(?:fallback|failover|failback)|"
+            r"(?:fallback|failover|failback).*(?:read[- ]only|retention[- ]only)",
+            line,
+            re.IGNORECASE,
+        ) and not re.search(r"\b(?:not|never|cannot|no longer)\b", line, re.IGNORECASE):
+            errors.append("read-only or retention-only indexes cannot serve as failover")
+            break
     return errors
 
 
@@ -304,24 +365,25 @@ def validate_migration_contracts(text: str) -> list[str]:
     ):
         errors.append("MIGRATE budgets must separate backfill duration from cost")
 
-    backfill_formula = next(
-        (
-            paragraph
-            for paragraph in re.split(r"\n\s*\n", budgets)
-            if re.search(r"backfill\s+cost", paragraph, re.IGNORECASE)
-        ),
-        None,
+    backfill_formula_match = re.search(
+        r"backfill\s+cost.*?(?=\n(?:#{1,6}\s+|"
+        r"(?:incremental\s+)?dual[- ]run\s+cost|"
+        r"steady[- ]state\s+cost)|\Z)",
+        budgets,
+        re.IGNORECASE | re.DOTALL,
     )
-    if backfill_formula:
-        formula_match = re.search(
-            r"backfill\s+cost", backfill_formula, re.IGNORECASE
-        )
-        if formula_match is None:
-            raise AssertionError("backfill formula selection lost its marker")
-        formula = backfill_formula[formula_match.start() :]
-        if re.search(
-            r"/.*(?:throughput|chunks/s|chunks per second).*(?:\*|×)",
+    if backfill_formula_match:
+        formula = backfill_formula_match.group(0)
+        cost_expression = re.search(
+            r"(?:backfill_write_cost|(?:one[- ]time\s+)?backfill\s+cost)"
+            r"\**\s*=\s*(.*?)(?=\n\s*(?:[A-Za-z][A-Za-z _-]*cost|"
+            r"backfill_duration|reembedding_cost)\s*=|\n\s*\n|\Z)",
             formula,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if cost_expression and re.search(
+            r"/.*(?:throughput|chunks/s|chunks per second).*(?:\*|×)",
+            cost_expression.group(1),
             re.IGNORECASE | re.DOTALL,
         ):
             errors.append(
@@ -413,6 +475,7 @@ def validate(text: str, level: str) -> list[str]:
         errors.append("Target system must contain its Mermaid diagram")
 
     audit_body = heading_body(text, "Plan audit") or ""
+    risks_body = heading_body(text, "Risks and decisions") or ""
     result = audit_result(audit_body)
     if result is None:
         errors.append("Plan audit must record an explicit result")
@@ -429,6 +492,22 @@ def validate(text: str, level: str) -> list[str]:
         "IMPLEMENTED",
     }:
         errors.append("Status must reflect a READY audit result")
+
+    has_open_decisions = bool(
+        re.search(
+            r"\b(?:AWAITING_DECISIONS|open decisions?|blocking decisions?|"
+            r"decisions? required from)\b",
+            risks_body + "\n" + audit_body,
+            re.IGNORECASE,
+        )
+    )
+    if has_open_decisions:
+        if status != "AWAITING_DECISIONS" or result != "AWAITING_DECISIONS":
+            errors.append(
+                "plans blocked only by owner input must use AWAITING_DECISIONS "
+                "for both Status and Result"
+            )
+        errors.extend(validate_decision_table(risks_body))
 
     if level == "P3":
         budget_body = heading_body(text, "Capacity, latency, and cost budgets")
@@ -464,6 +543,8 @@ def validate(text: str, level: str) -> list[str]:
             errors.extend(validate_migration_contracts(text))
             rollout_body = heading_body(text, "Rollout and rollback") or ""
             errors.extend(validate_rollout_windows(rollout_body))
+
+    errors.extend(validate_security_language(text))
 
     placeholders = sorted(set(PLACEHOLDER_PATTERN.findall(text)))
     if placeholders:

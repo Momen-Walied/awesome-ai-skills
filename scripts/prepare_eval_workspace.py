@@ -32,6 +32,22 @@ CASE_COMMANDS = {
         "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
         "inspect_diff": "git diff --stat",
     },
+    "migration-incompatible-embeddings": {
+        "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
+        "inspect_diff": "git diff --stat",
+    },
+    "migration-without-cdc": {
+        "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
+        "inspect_diff": "git diff --stat",
+    },
+    "migration-acl-capability-gap": {
+        "verify": "find docs/plans -maxdepth 1 -type f -name '*.md' -print",
+        "inspect_diff": "git diff --stat",
+    },
+    "stale-fallback-incident": {
+        "verify": "git status --short",
+        "inspect_diff": "git diff --stat",
+    },
 }
 
 

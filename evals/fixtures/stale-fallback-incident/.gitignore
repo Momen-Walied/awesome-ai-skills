@@ -1,0 +1,5 @@
+.agents/
+.omo/
+.pytest_cache/
+__pycache__/
+skills-lock.json

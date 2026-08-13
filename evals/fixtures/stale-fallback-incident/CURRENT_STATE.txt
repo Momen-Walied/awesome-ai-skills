@@ -1,0 +1,6 @@
+Current production incident
+
+- Vendor B is timing out on production retrieval requests.
+- Vendor A is reachable, but it stopped receiving writes 24 hours ago.
+- Document deletes and permission revocations continued after Vendor A became stale.
+- Cross-tenant leakage is unacceptable.

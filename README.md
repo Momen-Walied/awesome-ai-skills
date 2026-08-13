@@ -109,6 +109,19 @@ opencode
 Use the prompt printed by the setup script. This fixture prevents a workspace
 mismatch from being mistaken for an implementation failure.
 
+Use the same command shape with these migration resilience cases:
+
+```text
+migration-incompatible-embeddings
+migration-without-cdc
+migration-acl-capability-gap
+stale-fallback-incident
+```
+
+Each case creates a clean repository and prints its prompt and verification
+commands. The first three require a `P3` migration plan; the stale-fallback
+case exercises `OPERATE` behavior during an authorization-sensitive incident.
+
 ## Release policy
 
 A release must pass unit tests, Python compilation, corpus validation, the

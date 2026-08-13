@@ -1,0 +1,6 @@
+Current migration constraint
+
+- Vendor A enforces deny inheritance and dynamic group revocations before retrieval.
+- Vendor B filters cannot express those semantics.
+- Cross-tenant leakage and silently hiding authorized documents are unacceptable.
+- The target isolation and authorization representation are not yet decided.

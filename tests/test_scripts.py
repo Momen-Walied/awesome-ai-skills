@@ -163,7 +163,12 @@ sequenceDiagram
     API->>Index: Authorized query
 ```
 
-## Risks and decisions""",
+## Risks and decisions
+
+| Decision | Recommendation | Alternatives | Impact |
+| --- | --- | --- | --- |
+| Cost ceiling | Use the approved product ceiling | Reduce scope | Controls rollout |
+""",
         )
         text = text.replace(
             "Result: PASS and READY for implementation.",
@@ -220,6 +225,39 @@ Resolve the owner decision before moving the plan to READY.
 | Total | 400 ms | Recomputed total |
 """
         self.assertEqual(plan_document.validate_latency_budget(body), [])
+
+    def test_p3_latency_budget_uses_units_declared_in_header(self) -> None:
+        body = """
+| Stage | Budget (ms) | Notes |
+| --- | --- | --- |
+| Retrieval | 300 | Measured path |
+| Headroom | 100 | Variance |
+| Total | 400 | Recomputed total |
+"""
+        self.assertEqual(plan_document.validate_latency_budget(body), [])
+
+    def test_p3_latency_budget_validates_every_path_table(self) -> None:
+        body = """
+### Primary path
+
+| Stage | Budget (ms) |
+| --- | --- |
+| Retrieval | 300 |
+| Headroom | 100 |
+| Total | 400 |
+
+### Fallback path
+
+| Stage | Budget (ms) |
+| --- | --- |
+| Failure detection | 100 |
+| Fallback retrieval | 200 |
+| Headroom | 100 |
+| Total | 450 |
+"""
+        errors = plan_document.validate_latency_budget(body)
+        self.assertTrue(any("Fallback path" in error for error in errors))
+        self.assertTrue(any("declared 450 ms, calculated 400 ms" in error for error in errors))
 
     def test_p3_latency_budget_rejects_multiple_path_totals(self) -> None:
         body = """
@@ -304,6 +342,46 @@ Resolve the owner decision before moving the plan to READY.
             plan_document.validate_rollout_windows("PROPOSED: Canary for 24 h."),
             [],
         )
+
+    def test_open_decisions_require_matching_status_and_decision_table(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("**Status:** AWAITING_DECISIONS", "**Status:** PROPOSED")
+        text = text.replace("**Result:** AWAITING_DECISIONS", "**Result:** FAIL")
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("owner input" in error for error in errors))
+
+    def test_awaiting_decisions_requires_recommendations_and_impacts(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace("| Decision | Recommendation | Alternatives | Impact |", "Questions:")
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("decision table" in error for error in errors))
+
+    def test_security_contract_rejects_fail_open_and_stale_failover(self) -> None:
+        text = """
+Unauthorized result: fail open to deny-by-default.
+Demote Vendor A to read-only failover.
+"""
+        errors = plan_document.validate_security_language(text)
+        self.assertTrue(any("fail closed" in error for error in errors))
+        self.assertTrue(any("cannot serve as failover" in error for error in errors))
+
+    def test_backfill_formula_can_follow_its_label_in_a_code_block(self) -> None:
+        text = (FIXTURES / "p3-migration-plan.md").read_text(encoding="utf-8")
+        text = text.replace(
+            "UNKNOWN: effective chunks per second and production QPS. Migration duration =\n"
+            "remaining chunks / effective chunks per second. One-time backfill cost =\n"
+            "billable chunks / billing unit chunks * price per billing unit + source reads +\n"
+            "egress + optional embedding.",
+            """UNKNOWN: effective chunks per second and production QPS.
+
+Backfill cost:
+
+```text
+backfill_duration = total chunks / effective chunks per second
+backfill_write_cost = billable chunks / billing unit chunks * price per billing unit
+```""",
+        )
+        self.assertEqual(plan_document.validate(text, "P3"), [])
 
 
 class SkillEvaluationTests(unittest.TestCase):
@@ -442,6 +520,20 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertEqual(case["expected_plan_level"], "P3")
 
+    def test_adversarial_migration_cases_cover_distinct_failure_modes(self) -> None:
+        cases = skill_evals.load_jsonl(ROOT / "evals" / "cases.jsonl", "cases")
+        indexed = {case["id"]: case for case in cases}
+        expected = {
+            "migration-incompatible-embeddings": "MIGRATE",
+            "migration-without-cdc": "MIGRATE",
+            "migration-acl-capability-gap": "MIGRATE",
+            "stale-fallback-incident": "OPERATE",
+        }
+        for case_id, mode in expected.items():
+            with self.subTest(case_id=case_id):
+                self.assertEqual(indexed[case_id]["expected_mode"], mode)
+                self.assertTrue(indexed[case_id]["manual_review"])
+
     def test_missing_target_case_forbids_substitute_artifacts(self) -> None:
         cases = skill_evals.load_jsonl(ROOT / "evals" / "cases.jsonl", "cases")
         case = next(
@@ -504,6 +596,28 @@ class RepositoryContractTests(unittest.TestCase):
 
 
 class EvaluationWorkspaceTests(unittest.TestCase):
+    def test_adversarial_migration_fixtures_are_preparable(self) -> None:
+        case_ids = (
+            "migration-incompatible-embeddings",
+            "migration-without-cdc",
+            "migration-acl-capability-gap",
+            "stale-fallback-incident",
+        )
+        for case_id in case_ids:
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "workspace"
+                result = eval_workspace.prepare_workspace(case_id, output)
+                status = subprocess.run(
+                    ["git", "status", "--short"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertEqual(status.stdout, "")
+                self.assertTrue((output / "CURRENT_STATE.txt").is_file())
+                self.assertEqual(result["case_id"], case_id)
+
     def test_vendor_migration_fixture_preserves_blocking_unknowns(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "workspace"
