@@ -5,8 +5,6 @@ currently ships `rag-production-engineer`, a vendor-neutral skill for designing,
 implementing, debugging, scaling, migrating, auditing, and operating RAG
 systems.
 
-[![skills.sh](https://skills.sh/b/Momen-Walied/awesome-ai-skills)](https://skills.sh/Momen-Walied/awesome-ai-skills)
-
 ## Available skill
 
 ### RAG production engineer
@@ -46,8 +44,9 @@ npx skills@1.5.20 add . \
   --agent codex claude-code opencode antigravity
 ```
 
-The public source becomes visible through [skills.sh](https://skills.sh/) after
-the directory's indexing cycle processes the repository.
+Installation from GitHub works now. The `skills.sh` directory listing is pending
+upstream indexing in
+[`vercel-labs/skills#1951`](https://github.com/vercel-labs/skills/issues/1951).
 
 ## Validate
 
