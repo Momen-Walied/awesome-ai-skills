@@ -276,6 +276,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("NO SUBSTITUTE FILES", text)
         self.assertIn("workspace mismatch", text)
         self.assertIn("Do not create substitute application artifacts", text)
+        self.assertIn("Planning level: P1", text)
 
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
@@ -302,6 +303,22 @@ class EvaluationWorkspaceTests(unittest.TestCase):
             )
             self.assertEqual(result["case_id"], "bounded-chunk-config")
             self.assertIn("from 40 to 60", result["prompt"])
+            status = subprocess.run(
+                ["git", "status", "--short"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            baseline = subprocess.run(
+                ["git", "show", "HEAD:app/config.py"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(status.stdout, "")
+            self.assertIn("CHUNK_OVERLAP = 40", baseline.stdout)
             completed = subprocess.run(
                 ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
                 cwd=output,

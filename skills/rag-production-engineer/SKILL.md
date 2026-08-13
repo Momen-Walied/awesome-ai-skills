@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 # RAG production engineer
@@ -117,6 +117,12 @@ blast radius, uncertainty, and reversibility.
 | `P1` | Bounded change in one component | Proposed plan in chat |
 | `P2` | Cross-component or production behavior change | Reviewed Markdown plan |
 | `P3` | Migration, high-risk, large-scale, or multi-vendor program | Staged Markdown plan |
+
+For `P1`, put `Mode: <MODE>` and `Planning level: P1` in the first work update,
+followed by a concise proposed plan before editing. When the task has three
+actions such as locate, update, and verify, use those actions as the execution
+ledger. Do not replace these declarations with a retrospective summary because
+the change appears trivial.
 
 Require `P2` or `P3` for new architectures, data or index migrations, ACL or
 security changes, provider changes, multi-vendor routing, distributed scaling,

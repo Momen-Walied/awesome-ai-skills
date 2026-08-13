@@ -49,11 +49,35 @@ def prepare_workspace(case_id: str, output: Path) -> dict[str, str]:
         capture_output=True,
         text=True,
     )
+    subprocess.run(
+        ["git", "-C", str(output), "add", "--all"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(output),
+            "-c",
+            "user.name=Agent Skill Eval",
+            "-c",
+            "user.email=eval@example.invalid",
+            "commit",
+            "-m",
+            "Create evaluation baseline",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
     return {
         "case_id": case_id,
         "workspace": str(output.resolve()),
         "prompt": case["prompt"],
         "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- app/config.py tests/test_config.py",
     }
 
 
