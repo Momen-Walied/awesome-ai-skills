@@ -45,6 +45,9 @@ plan_document = load_module(
     / "validate_plan_document.py",
 )
 skill_evals = load_module("run_skill_evals", ROOT / "scripts" / "run_skill_evals.py")
+eval_workspace = load_module(
+    "prepare_eval_workspace", ROOT / "scripts" / "prepare_eval_workspace.py"
+)
 
 
 class RetrievalEvaluationTests(unittest.TestCase):
@@ -146,6 +149,36 @@ class SkillEvaluationTests(unittest.TestCase):
         self.assertEqual(report["score"], 1.0)
         self.assertEqual(report["failures"], [])
 
+    def test_manual_review_checks_are_validated_and_reported(self) -> None:
+        case = {
+            "id": "capacity",
+            "prompt": "Design capacity.",
+            "should_trigger": True,
+            "expected_mode": "DESIGN",
+            "expected_plan_level": "P3",
+            "manual_review": ["Recompute cost with explicit units."],
+        }
+        self.assertEqual(skill_evals.validate_cases([case]), [])
+        result = {
+            "case_id": "capacity",
+            "triggered": True,
+            "response": "Mode: DESIGN. Planning level P3.",
+        }
+        report = skill_evals.score_case(case, result)
+        self.assertEqual(report["manual_review"], case["manual_review"])
+
+    def test_invalid_manual_review_check_is_rejected(self) -> None:
+        case = {
+            "id": "capacity",
+            "prompt": "Design capacity.",
+            "should_trigger": True,
+            "expected_mode": "DESIGN",
+            "expected_plan_level": "P3",
+            "manual_review": [""],
+        }
+        errors = skill_evals.validate_cases([case])
+        self.assertTrue(any("manual_review" in error for error in errors))
+
     def test_missing_result_is_reported(self) -> None:
         indexed, errors = skill_evals.validate_results([], {"required-case"})
         self.assertEqual(indexed, {})
@@ -219,6 +252,21 @@ class RepositoryContractTests(unittest.TestCase):
         skill = ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
         self.assertLessEqual(len(skill.read_text(encoding="utf-8").splitlines()), 500)
 
+    def test_large_scale_greenfield_case_requires_p3(self) -> None:
+        cases = skill_evals.load_jsonl(ROOT / "evals" / "cases.jsonl", "cases")
+        case = next(
+            case for case in cases if case["id"] == "greenfield-production-design"
+        )
+        self.assertEqual(case["expected_plan_level"], "P3")
+
+    def test_skill_enforces_numeric_and_workspace_integrity(self) -> None:
+        text = (
+            ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("RECOMPUTATION CHECK", text)
+        self.assertIn("workspace mismatch", text)
+        self.assertIn("Do not create substitute application artifacts", text)
+
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -233,6 +281,32 @@ class RepositoryContractTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 value = json.loads(path.read_text(encoding="utf-8"))
                 self.assertIsInstance(value, dict)
+
+
+class EvaluationWorkspaceTests(unittest.TestCase):
+    def test_bounded_change_fixture_is_runnable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "workspace"
+            result = eval_workspace.prepare_workspace(
+                "bounded-chunk-config", output
+            )
+            self.assertEqual(result["case_id"], "bounded-chunk-config")
+            self.assertIn("from 40 to 60", result["prompt"])
+            completed = subprocess.run(
+                ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                cwd=output,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_workspace_setup_rejects_nonempty_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output / "existing.txt").write_text("keep", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "not empty"):
+                eval_workspace.prepare_workspace("bounded-chunk-config", output)
 
 
 if __name__ == "__main__":

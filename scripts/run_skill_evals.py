@@ -91,6 +91,16 @@ def validate_signal_map(value: Any, location: str) -> list[str]:
     return errors
 
 
+def validate_manual_review(value: Any, location: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not value:
+        return [f"{location} must be a non-empty list"]
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        return [f"{location} must contain non-empty strings"]
+    return []
+
+
 def validate_cases(cases: list[dict[str, Any]]) -> list[str]:
     errors: list[str] = []
     seen: set[str] = set()
@@ -128,6 +138,11 @@ def validate_cases(cases: list[dict[str, Any]]) -> list[str]:
         )
         errors.extend(
             validate_signal_map(case.get("forbidden_signals"), f"{location}.forbidden")
+        )
+        errors.extend(
+            validate_manual_review(
+                case.get("manual_review"), f"{location}.manual_review"
+            )
         )
     return errors
 
@@ -208,6 +223,7 @@ def score_case(case: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
         "total_checks": checks,
         "score": round(passed / checks, 6),
         "failures": failures,
+        "manual_review": case.get("manual_review", []),
     }
 
 
@@ -238,6 +254,9 @@ def score(cases: list[dict[str, Any]], results: dict[str, dict[str, Any]]) -> di
             "trigger_precision": round(precision, 6),
             "trigger_recall": round(recall, 6),
             "trigger_confusion": {"tp": tp, "fp": fp, "tn": tn, "fn": fn},
+            "manual_review_items": sum(
+                len(case.get("manual_review", [])) for case in cases
+            ),
         },
         "cases": case_reports,
     }
@@ -270,6 +289,9 @@ def main() -> int:
             "cases": len(cases),
             "positive": sum(case["should_trigger"] for case in cases),
             "negative": sum(not case["should_trigger"] for case in cases),
+            "manual_review_items": sum(
+                len(case.get("manual_review", [])) for case in cases
+            ),
             "status": "valid",
         }
         print(json.dumps(summary, indent=2, sort_keys=True))

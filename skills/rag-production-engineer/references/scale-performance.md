@@ -72,6 +72,26 @@ rebuild duration.
 
 Calculate cost by successful grounded answer and by workload slice.
 
+Before reporting a capacity, latency, duration, or cost result, write the
+calculation with named inputs and units. At minimum:
+
+- convert rates to the same time unit, such as
+  `answers/day = QPS * utilization * 86,400 seconds/day`;
+- calculate workload cost as
+  `period cost = successful answers * cost/successful answer`;
+- calculate migration duration as
+  `items / effective sustained throughput`, including retry, quota, and
+  throttling assumptions;
+- state whether bytes use decimal or binary units and whether prices are per
+  token, request, hour, operation, or stored unit;
+- recompute the result independently and verify its order of magnitude.
+
+Label inputs as `MEASURED`, `ESTIMATED`, `PROPOSED`, or `UNKNOWN`. Give a range
+when effective throughput, utilization, compression, cache hit rate, or vendor
+limits are unknown. Treat zero headroom as a failed capacity gate, not a viable
+steady-state plan. When exact vendor prices materially affect a decision, use
+current first-party pricing and record the source date.
+
 Include source extraction, embedding, index storage and operations, reranking,
 model input and output tokens, observability, network transfer, replicas, and
 engineering operations.

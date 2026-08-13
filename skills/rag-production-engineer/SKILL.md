@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 # RAG production engineer
@@ -120,8 +120,9 @@ blast radius, uncertainty, and reversibility.
 Require `P2` or `P3` for new architectures, data or index migrations, ACL or
 security changes, provider changes, multi-vendor routing, distributed scaling,
 major retrieval redesigns, and performance work that changes production
-capacity or service-level objectives. Use `P3` when the work needs phased
-delivery, dual-running, cutover, rollback, or retirement of old state.
+capacity or service-level objectives. Use `P3` for large-scale greenfield
+systems and when the work needs phased delivery, dual-running, cutover,
+rollback, or retirement of old state.
 
 For `P2` and `P3`, read
 [planning-protocol.md](references/planning-protocol.md), then follow this gate:
@@ -167,6 +168,9 @@ FAILURE, AND SECURITY EVIDENCE.
 
 NO MULTI-VENDOR FAILOVER CLAIM WITHOUT COMPATIBLE DATA,
 POLICY, INDEX, AND OUTPUT CONTRACTS.
+
+NO CAPACITY, LATENCY, DURATION, OR COST CLAIM WITHOUT EXPLICIT
+UNITS, INPUTS, FORMULA, ASSUMPTIONS, AND A RECOMPUTATION CHECK.
 ```
 
 Apply these rules throughout the task:
@@ -179,6 +183,8 @@ Apply these rules throughout the task:
   ingestion through citations, evaluations, and traces.
 - Instrument a stage before optimizing it. Report p50, p95, and p99 instead of
   averages alone.
+- Label unmeasured values as `ESTIMATED` or `PROPOSED`. Do not present a
+  derived value until its units and arithmetic have been checked independently.
 - Keep domain interfaces vendor-neutral at meaningful boundaries. Add a second
   implementation only for a real resilience or migration requirement.
 - Bound every remote call with a deadline, retry policy, circuit behavior, and
@@ -195,6 +201,13 @@ Return to an earlier phase whenever its evidence becomes invalid.
 
 Inspect the existing system before recommending products or changes. Identify
 the user outcome and the cost of a wrong, incomplete, stale, or slow answer.
+
+When the requested application file, configuration, or test is absent after a
+repository-wide search, report a workspace mismatch and stop that implementation
+path. Do not create substitute application artifacts in a skill, documentation,
+or unrelated repository unless the user explicitly requested a greenfield
+scaffold. Ask for the correct repository or path; for skill evaluation, use a
+disposable fixture outside the product tree.
 
 Capture this workload profile:
 

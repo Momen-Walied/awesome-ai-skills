@@ -27,6 +27,7 @@ jobs:
       - run: >-
           python -m py_compile
           scripts/run_skill_evals.py
+          scripts/prepare_eval_workspace.py
           skills/rag-production-engineer/scripts/*.py
       - run: >-
           python scripts/run_skill_evals.py

@@ -87,7 +87,27 @@ python3 scripts/run_skill_evals.py \
 ```
 
 The scorer reports trigger precision and recall, routing and planning-level
-compliance, required safety signals, prohibited claims, and per-case failures.
+compliance, required safety signals, prohibited claims, per-case failures, and
+semantic checks that require manual review.
+
+For the bounded configuration case, create a disposable repository before
+opening your agent:
+
+```bash
+python3 scripts/prepare_eval_workspace.py \
+  bounded-chunk-config \
+  --output /tmp/rag-bounded-chunk-eval
+cd /tmp/rag-bounded-chunk-eval
+npx skills@1.5.20 add Momen-Walied/awesome-ai-skills \
+  --skill rag-production-engineer \
+  --agent opencode \
+  --copy \
+  --yes
+opencode
+```
+
+Use the prompt printed by the setup script. This fixture prevents a workspace
+mismatch from being mistaken for an implementation failure.
 
 ## Release policy
 
