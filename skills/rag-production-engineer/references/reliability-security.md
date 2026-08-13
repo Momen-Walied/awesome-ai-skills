@@ -58,6 +58,18 @@ missing, malformed, or stale.
 Keep authorization attributes separate from model-generated metadata. The model
 cannot grant access.
 
+At large corpus sizes, do not copy unbounded user and group lists onto every
+chunk by default. Measure principal cardinality and permission churn, then
+choose a bounded representation such as tenant plus document policy-set IDs or
+precomputed authorization tokens that the retrieval provider can filter. Keep
+the authoritative document policy outside the vector index and add a
+defense-in-depth authorization check before context assembly.
+
+Distinguish logical isolation from physical isolation. A namespace, collection,
+or index per tenant does not necessarily require a separate compute fleet per
+tenant; verify the provider's routing, filter, backup, quota, and noisy-neighbor
+semantics before making a cost or security claim.
+
 ## Defend against untrusted content
 
 Treat retrieved documents as untrusted data, not instructions. Separate them

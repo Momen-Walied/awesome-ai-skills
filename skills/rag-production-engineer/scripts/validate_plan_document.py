@@ -24,6 +24,7 @@ REQUIRED_SECTIONS = (
     "Risks and decisions",
     "Plan audit",
 )
+P3_REQUIRED_SECTIONS = ("Capacity, latency, and cost budgets",)
 VALID_STATUSES = {
     "PROPOSED",
     "AWAITING_DECISIONS",
@@ -81,6 +82,14 @@ def validate(text: str, level: str) -> list[str]:
         elif not body:
             errors.append(f"empty section: {section}")
 
+    if level == "P3":
+        for section in P3_REQUIRED_SECTIONS:
+            body = heading_body(text, section)
+            if body is None:
+                errors.append(f"missing P3 section: {section}")
+            elif not body:
+                errors.append(f"empty P3 section: {section}")
+
     mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", text, re.DOTALL)
     flowcharts = [block for block in mermaid_blocks if re.search(r"\bflowchart\b", block)]
     sequences = [
@@ -101,6 +110,47 @@ def validate(text: str, level: str) -> list[str]:
     audit_body = heading_body(text, "Plan audit") or ""
     if not re.search(r"\b(?:PASS|FAIL|READY|AWAITING_DECISIONS)\b", audit_body):
         errors.append("Plan audit must record an explicit result")
+
+    if "AWAITING_DECISIONS" in audit_body and status != "AWAITING_DECISIONS":
+        errors.append(
+            "Status must be AWAITING_DECISIONS when the audit result is "
+            "AWAITING_DECISIONS"
+        )
+    if re.search(r"\bREADY\b", audit_body) and status not in {
+        "READY",
+        "APPROVED",
+        "IN_PROGRESS",
+        "IMPLEMENTED",
+    }:
+        errors.append("Status must reflect a READY audit result")
+
+    if level == "P3":
+        budget_body = heading_body(text, "Capacity, latency, and cost budgets")
+        if budget_body:
+            if not re.search(
+                r"\b(?:QPS|queries per second|chunks per second)\b",
+                budget_body,
+                re.IGNORECASE,
+            ):
+                errors.append("P3 budgets must include a capacity rate with units")
+            if not re.search(
+                r"\b(?:ms|milliseconds?|seconds?)\b",
+                budget_body,
+                re.IGNORECASE,
+            ):
+                errors.append("P3 budgets must include latency units")
+            if not re.search(
+                r"(?:cost|USD|\$).*?(?:=|formula|UNKNOWN)",
+                budget_body,
+                re.IGNORECASE | re.DOTALL,
+            ):
+                errors.append(
+                    "P3 budgets must include a cost formula or explicit unknown"
+                )
+            if not re.search(
+                r"\b(?:MEASURED|ESTIMATED|PROPOSED|UNKNOWN)\b", budget_body
+            ):
+                errors.append("P3 budgets must label numerical evidence")
 
     placeholders = sorted(set(PLACEHOLDER_PATTERN.findall(text)))
     if placeholders:

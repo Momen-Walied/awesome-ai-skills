@@ -49,6 +49,11 @@ Define independently verifiable slices with dependencies and completion gates.
 
 Specify datasets, slices, metrics, thresholds, and regression limits.
 
+## Capacity, latency, and cost budgets
+
+Show labeled workload conversions, capacity ranges, a critical-path latency
+budget with headroom, and cost formulas or explicit unknown inputs.
+
 ## Operability
 
 Specify traces, metrics, dashboards, alerts, runbooks, and owners.

@@ -89,6 +89,11 @@ dependencies, verification, rollback, and completion criteria for every slice.
 Define datasets, query slices, metrics, thresholds, load shape, security tests,
 failure exercises, and comparison method.
 
+## Capacity, latency, and cost budgets
+
+Show workload conversions, capacity assumptions, critical-path latency by
+stage with headroom, cost formulas, sensitivity ranges, and evidence labels.
+
 ## Operability
 
 Define traces, metrics, logs, dashboards, alerts, ownership, runbooks,
@@ -126,6 +131,11 @@ For `P2`, include at least:
 For `P3`, also include:
 
 3. A migration, cutover, fallback, or failure sequence diagram.
+
+The sequence must represent the observed current state and proposed rollout.
+For greenfield work, use an initial rollout or failure sequence; do not invent a
+current production index, dual-write path, or rollback state only to satisfy the
+diagram requirement.
 
 Use stable component names that match the prose and implementation. Mark trust
 boundaries, tenant or ACL enforcement, asynchronous queues, external vendors,
@@ -203,6 +213,8 @@ Verify these dimensions:
   paths; sensitive telemetry and data handling are defined.
 - **Scale and economics:** Workload, capacity, tail latency, cost, quotas, and
   tenant skew have measurable treatment.
+- **Numerical integrity:** Units, duty cycle, formulas, arithmetic, headroom,
+  ranges, and evidence labels are explicit and independently recomputed.
 - **Quality:** Retrieval and generation have separate datasets, slices,
   metrics, and thresholds.
 - **Reliability:** Timeouts, retries, circuits, degradation, recovery, and
@@ -214,7 +226,8 @@ Verify these dimensions:
 - **Verification:** Every completion claim maps to a command, evaluation,
   benchmark, inspection, or failure exercise.
 - **Document integrity:** Terms, component names, interfaces, diagrams, and
-  delivery slices agree; no placeholders remain.
+  delivery slices agree; status matches the audit result; no placeholders
+  remain.
 
 ## Finalize the plan
 

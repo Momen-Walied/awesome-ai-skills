@@ -122,6 +122,59 @@ class PlanValidationTests(unittest.TestCase):
         errors = plan_document.validate(text, "P3")
         self.assertTrue(any("sequence diagram" in error for error in errors))
 
+    def test_p3_document_requires_numerical_budgets(self) -> None:
+        text = (FIXTURES / "p2-plan.md").read_text(encoding="utf-8")
+        text += """
+
+```mermaid
+sequenceDiagram
+    participant API
+    participant Index
+    API->>Index: Authorized query
+```
+"""
+        errors = plan_document.validate(text, "P3")
+        self.assertTrue(any("Capacity, latency, and cost budgets" in error for error in errors))
+
+    def test_p3_document_accepts_labeled_recomputable_budgets(self) -> None:
+        text = (FIXTURES / "p2-plan.md").read_text(encoding="utf-8")
+        text = text.replace("**Status:** APPROVED", "**Status:** AWAITING_DECISIONS")
+        text = text.replace(
+            "## Operability",
+            """## Capacity, latency, and cost budgets
+
+PROPOSED: 100 QPS. Latency budget = 900 milliseconds plus 100 milliseconds
+headroom. Cost formula: monthly USD = queries per second * duty cycle * unit
+cost; unit cost is UNKNOWN.
+
+## Operability""",
+        )
+        text = text.replace(
+            "## Risks and decisions",
+            """```mermaid
+sequenceDiagram
+    participant API
+    participant Index
+    API->>Index: Authorized query
+```
+
+## Risks and decisions""",
+        )
+        text = text.replace(
+            "Result: PASS and READY for implementation.",
+            "Result: AWAITING_DECISIONS pending the cost ceiling.",
+        )
+        self.assertEqual(plan_document.validate(text, "P3"), [])
+
+    def test_plan_status_must_match_awaiting_decisions_audit(self) -> None:
+        text = (FIXTURES / "p2-plan.md").read_text(encoding="utf-8")
+        text = text.replace(
+            "Result: PASS and READY for implementation.",
+            "Result: AWAITING_DECISIONS pending a policy decision.",
+        )
+        errors = plan_document.validate(text, "P2")
+        self.assertTrue(any("Status must be AWAITING_DECISIONS" in error for error in errors))
+
 
 class SkillEvaluationTests(unittest.TestCase):
     def test_repository_corpus_is_valid_and_balanced(self) -> None:
@@ -277,6 +330,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("workspace mismatch", text)
         self.assertIn("Do not create substitute application artifacts", text)
         self.assertIn("Planning level: P1", text)
+        self.assertIn("Capacity, latency, and cost budgets", text)
+        self.assertIn("structural validator pass means only", text)
 
     def test_skill_description_pushes_small_rag_config_triggers(self) -> None:
         text = (

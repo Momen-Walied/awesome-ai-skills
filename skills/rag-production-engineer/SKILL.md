@@ -17,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 # RAG production engineer
@@ -27,6 +27,13 @@ freshness, security, and reliability targets. Control the work with explicit
 modes, tracked tasks, evidence gates, and bounded fallbacks. Leave every answer
 and design decision explainable. The instructions are portable across Agent
 Skills clients. Bundled Python utilities require Python 3.11 or newer.
+
+## Run the mandatory preflight
+
+Before any repository inspection, reference read, delegated task, or other tool
+call, publish `Mode: <MODE>`, `Planning level: P0|P1|P2|P3`, and the execution
+ledger required by the scope. This preflight is the first work update, not a
+summary added after exploration.
 
 ## Route the task
 
@@ -159,6 +166,12 @@ For `P2` and `P3`, read
 9. Run `scripts/validate_plan_document.py <plan.md> --level P2|P3` and resolve
    every structural failure before marking the plan `READY`.
 
+For `P3`, include a dedicated `Capacity, latency, and cost budgets` section.
+Normalize workload rates across time units, show formulas and units, reserve
+latency headroom, and label every non-user-provided input. Use sensitivity
+ranges when traffic shape, throughput, token volume, or price is unknown. Keep
+the document status and plan-audit result identical.
+
 Use `assets/rag-plan-template.md` when the repository has no stronger planning
 template. Replace every `UNKNOWN` that can be discovered before validation.
 
@@ -207,6 +220,8 @@ Apply these rules throughout the task:
   averages alone.
 - Label unmeasured values as `ESTIMATED` or `PROPOSED`. Do not present a
   derived value until its units and arithmetic have been checked independently.
+- Do not invent a peak-to-average ratio, workload duty cycle, vendor price, or
+  migration rate. Keep it `UNKNOWN` and show a sensitivity calculation.
 - Keep domain interfaces vendor-neutral at meaningful boundaries. Add a second
   implementation only for a real resilience or migration requirement.
 - Bound every remote call with a deadline, retry policy, circuit behavior, and
@@ -309,6 +324,11 @@ Select the lowest architecture level that can pass the failed gate:
    expressed as a small deterministic router.
 10. Distribute a plane only when measured scale requires independent capacity,
     partitioning, or failure isolation.
+
+For a greenfield target, keep reranking, semantic caching, query expansion, and
+other optional stages behind their measured upgrade triggers. Large scale alone
+does not establish the quality failure or cache semantics required by the hard
+gates.
 
 **Completion criterion:** Name the failed metric or failure mode, the smallest
 intervention that targets it, alternatives rejected, expected effect, new risk,
@@ -420,6 +440,11 @@ For `DESIGN` or `MIGRATE`, include:
 Link the final response to the persistent Markdown plan for `P2` or `P3` work.
 Report whether it is proposed, awaiting decisions, approved, in progress,
 implemented, or superseded.
+
+A structural validator pass means only that the document shape is valid. Do not
+claim the semantic audit is complete until arithmetic is recomputed, current
+and target states agree with every diagram, optional components satisfy their
+hard gates, and each audit finding is revised, deferred, or accepted explicitly.
 
 For `IMPLEMENT`, report changed files, behavior, verification commands and
 results, metric deltas, fallback tests, and remaining risks. For `DEBUG`, report
