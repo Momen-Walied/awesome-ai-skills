@@ -287,6 +287,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("small config", frontmatter)
         self.assertIn("chunk overlap", frontmatter)
         self.assertIn("before\n  repository exploration", frontmatter)
+        self.assertIn("planning level, and execution ledger", frontmatter)
 
     def test_any_repository_mutation_starts_at_p1(self) -> None:
         text = (
@@ -295,6 +296,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("read-only inspection with no repository mutation", text)
         self.assertIn("Any requested repository mutation starts at `P1`", text)
         self.assertIn("config plus focused-test work", text)
+        self.assertIn("Do not delegate", text)
+        self.assertIn("additional speculative searches add latency", text)
 
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"

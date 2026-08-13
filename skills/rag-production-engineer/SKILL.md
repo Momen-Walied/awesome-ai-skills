@@ -6,8 +6,9 @@ description: >-
   work involving a RAG ingestion or retrieval pipeline, including small config
   and test changes to chunk size, chunk overlap, parsing, embeddings, indexing,
   vector or hybrid search, reranking, or grounded generation. Load it before
-  repository exploration, planning, or edits. Also trigger for evaluation,
-  tracing, monitoring, latency, cost, fallbacks, security,
+  repository exploration, planning, or edits, then begin with the mode,
+  planning level, and execution ledger. Also trigger for evaluation, tracing,
+  monitoring, latency, cost, fallbacks, security,
   multi-tenant isolation, large-scale data, production readiness, incidents,
   vendor selection, and multi-vendor migration. Enforce repository inspection,
   proportional reviewed plans, tracked execution, measurable baselines, phase
@@ -16,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 # RAG production engineer
@@ -128,6 +129,12 @@ the change appears trivial.
 Any requested repository mutation starts at `P1`, including a one-line value
 change. Never downgrade config plus focused-test work to `P0` because the
 behavioral change has only one variable.
+
+For `P1`, use direct repository search and file-reading tools. Do not delegate
+to planning or exploration subagents for a bounded local change. When a root
+inspection plus one repository-wide path and content search proves that named
+existing targets are absent, apply the workspace-mismatch gate immediately;
+additional speculative searches add latency without improving the evidence.
 
 Require `P2` or `P3` for new architectures, data or index migrations, ACL or
 security changes, provider changes, multi-vendor routing, distributed scaling,
