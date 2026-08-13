@@ -207,6 +207,14 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertIn("cache-dependency-path: requirements-dev.txt", workflow)
 
+    def test_ci_actions_use_node_24_runtimes(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(
+            encoding="utf-8"
+        )
+        for action in ("checkout", "setup-python", "setup-node"):
+            self.assertIn(f"actions/{action}@v6", workflow)
+        self.assertIn("node-version: 24", workflow)
+
     def test_skill_stays_within_progressive_disclosure_limit(self) -> None:
         skill = ROOT / "skills" / "rag-production-engineer" / "SKILL.md"
         self.assertLessEqual(len(skill.read_text(encoding="utf-8").splitlines()), 500)
