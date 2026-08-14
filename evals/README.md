@@ -62,6 +62,11 @@ the fix would overfit or weaken another host.
 Store reviewed release matrices in `records/`. Keep transcripts outside the
 repository unless a short excerpt is necessary to explain a failure.
 
+Use [the real-world field tests](field-tests.md) for controlled A/B runs on an
+ordinary text-file request, a large-project audit, and cost optimization in an
+existing RAG system. These runs evaluate observable artifacts and repository
+behavior instead of private chain-of-thought.
+
 ## Implementation cases
 
 The implementation suite covers distinct ownership paths across the RAG

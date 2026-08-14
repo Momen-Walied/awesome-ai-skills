@@ -764,6 +764,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Workspace fixtures", evaluation)
         self.assertIn("Cross-agent matrix", evaluation)
 
+        field_tests = (ROOT / "evals" / "field-tests.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("i need create rag to access .txt files", field_tests)
+        self.assertIn("audit this RAG project for production readiness", field_tests)
+        self.assertIn("optimize it without making answer quality worse", field_tests)
+        self.assertIn("Do not ask for private chain-of-thought", field_tests)
+        self.assertIn("git diff --stat", field_tests)
+
         results = json.loads(
             (ROOT / "evals" / "records" / "v0.2.0-cross-agent.json").read_text(
                 encoding="utf-8"
