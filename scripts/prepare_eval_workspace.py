@@ -92,6 +92,14 @@ CASE_COMMANDS = {
         "verify": "python3 -m unittest discover -s tests -v",
         "inspect_diff": "git diff -- retrieval_eval tests specs .specify",
     },
+    "query-rewrite-constraints": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- rewrite_service tests specs .specify",
+    },
+    "reranker-pass-through": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- rerank_service tests specs .specify",
+    },
 }
 
 

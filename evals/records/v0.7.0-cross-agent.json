@@ -1,0 +1,109 @@
+{
+  "release": "0.7.0",
+  "recorded_at": "2026-08-14",
+  "hosts": [
+    {
+      "name": "Codex CLI",
+      "version": "0.147.0-alpha.6.5",
+      "model": "gpt-5.5",
+      "skill_root": ".agents/skills"
+    },
+    {
+      "name": "OpenCode",
+      "version": "1.18.15",
+      "model": "kimi-k2.7-code",
+      "skill_root": ".agents/skills",
+      "orchestrator": "oh-my-openagent Sisyphus"
+    },
+    {
+      "name": "Gemini CLI",
+      "version": "0.42.0",
+      "skill_root": ".agents/skills",
+      "status": "environment_blocked"
+    }
+  ],
+  "runs": [
+    {
+      "case_id": "query-rewrite-constraints",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["rewrite_service/service.py"],
+      "visible_suite": {"passed": true, "tests": 8},
+      "extended_audit": {
+        "passed": false,
+        "contract": "a zero rewrite limit preserves the original-only route",
+        "evidence": "The implementation accepted one generated rewrite before checking whether the configured cap had already been reached."
+      },
+      "token_usage": null,
+      "review": "Activated the installed skill, traced the existing service, preserved the query envelope, filtered unsafe rewrites, deduplicated evidence, and stayed inside one service file."
+    },
+    {
+      "case_id": "reranker-pass-through",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["rerank_service/service.py"],
+      "visible_suite": {"passed": true, "tests": 8},
+      "extended_audit": {
+        "passed": false,
+        "contract": "a zero-sized rerank window passes through without calling the reranker",
+        "evidence": "The result was preserved, but the implementation still called the reranker with an empty candidate window."
+      },
+      "token_usage": 38976,
+      "review": "Activated the installed skill, implemented strict permutation validation, retained the untouched tail, preserved authorization, and kept fallback telemetry bounded."
+    },
+    {
+      "case_id": "query-rewrite-constraints",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["rewrite_service/service.py"],
+      "visible_suite": {"passed": true, "tests": 8},
+      "extended_audit": {
+        "passed": true,
+        "contract": "a zero rewrite limit preserves the original-only route",
+        "evidence": "The implementation checked the configured cap before accepting or retrieving a generated rewrite."
+      },
+      "token_usage": null,
+      "review": "Activated the installed skill and made a bounded service-only change that retained the original path, immutable literals, scope, stable-ID deduplication, and timeout fallback."
+    },
+    {
+      "case_id": "reranker-pass-through",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["rerank_service/service.py"],
+      "visible_suite": {"passed": true, "tests": 8},
+      "extended_audit": {
+        "passed": true,
+        "contract": "a zero-sized rerank window passes through without calling the reranker",
+        "evidence": "The implementation returned the authorized retrieval ranking before invoking the reranker when the configured window was empty."
+      },
+      "token_usage": null,
+      "review": "Activated the installed skill and implemented a strict window permutation contract, complete pass-through fallbacks, empty-input skipping, and tail preservation in one service file."
+    }
+  ],
+  "blocked_runs": [
+    {
+      "case_id": "query-rewrite-constraints",
+      "host": "Gemini CLI",
+      "reason": "Gemini CLI required interactive browser authentication before a model turn could start."
+    },
+    {
+      "case_id": "reranker-pass-through",
+      "host": "Gemini CLI",
+      "reason": "Gemini CLI required interactive browser authentication before a model turn could start."
+    }
+  ],
+  "summary": {
+    "automatic_skill_triggers": 4,
+    "visible_suites_passed": 4,
+    "extended_audit_passes": 2,
+    "extended_audit_failures": 2,
+    "host_environment_blocks": 2,
+    "fixture_contract_improvements_from_general_findings": 2,
+    "reference_contract_improvements_from_general_findings": 2,
+    "core_instruction_changes_from_model_specific_failures": 0
+  }
+}

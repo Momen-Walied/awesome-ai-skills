@@ -851,6 +851,32 @@ class RepositoryContractTests(unittest.TestCase):
             0,
         )
 
+        transformation_results = json.loads(
+            (ROOT / "evals" / "records" / "v0.7.0-cross-agent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(len(transformation_results["runs"]), 4)
+        self.assertEqual(len(transformation_results["blocked_runs"]), 2)
+        self.assertEqual(
+            transformation_results["summary"]["automatic_skill_triggers"], 4
+        )
+        self.assertEqual(
+            transformation_results["summary"]["visible_suites_passed"], 4
+        )
+        self.assertEqual(
+            transformation_results["summary"]["extended_audit_passes"], 2
+        )
+        self.assertEqual(
+            transformation_results["summary"]["extended_audit_failures"], 2
+        )
+        self.assertEqual(
+            transformation_results["summary"][
+                "core_instruction_changes_from_model_specific_failures"
+            ],
+            0,
+        )
+
     def test_skill_guides_the_host_instead_of_claiming_execution(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -891,6 +917,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Guide hybrid fusion changes", retrieval_generation)
         self.assertIn("Guide query transformation changes", retrieval_generation)
         self.assertIn("rank-based method", retrieval_generation)
+        self.assertIn("immutable retrieval envelope", retrieval_generation)
+        self.assertRegex(
+            retrieval_generation, r"complete\s+original retrieval ranking"
+        )
+        self.assertIn("Guide context assembly changes", retrieval_generation)
         evaluation = (references / "evaluation.md").read_text(encoding="utf-8")
         self.assertIn("Detect hidden regressions", evaluation)
         self.assertIn("Aggregate improvement cannot compensate", evaluation)
@@ -1141,6 +1172,8 @@ class EvaluationWorkspaceTests(unittest.TestCase):
                 5,
                 "test_critical_cohort_regression_blocks",
             ),
+            "query-rewrite-constraints": (5, "test_original_query_remains_first"),
+            "reranker-pass-through": (6, "test_success_reorders_window"),
         }
         for case_id, (failure_count, expected_test) in cases.items():
             with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:

@@ -88,6 +88,10 @@ lifecycle:
 - `retrieval-slice-regression` tests paired baseline/candidate reporting,
   critical-cohort gates, unauthorized-result rejection, missing evidence, and
   run-version provenance.
+- `query-rewrite-constraints` tests original-query preservation, immutable
+  request constraints, bounded rewrites, timeout fallback, and evidence dedup.
+- `reranker-pass-through` tests window permutations, untouched-tail ordering,
+  malformed-output validation, timeout pass-through, and empty retrieval.
 
 Each case contains an existing Spec Kit artifact and an intentionally failing
 acceptance scenario. The agent must make the suite pass through a bounded

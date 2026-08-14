@@ -153,10 +153,12 @@ cardinality, degraded-trace retention, grounded outcome indicators, and
 multi-window SLO burn without installing a monitoring vendor.
 
 The retrieval-quality fixtures add `hybrid-rank-fusion` and
-`retrieval-slice-regression`. They test fusion without comparing incompatible
-raw scores, stable-ID deduplication, tenant-safe rollback, paired cohort
-reporting, zero-tolerance authorization gates, and missing evaluation evidence
-without installing a retrieval or evaluation vendor.
+`retrieval-slice-regression`, `query-rewrite-constraints`, and
+`reranker-pass-through`. They test fusion without comparing incompatible raw
+scores, stable-ID deduplication, tenant-safe rollback, paired cohort reporting,
+constraint-preserving rewrites, reranker pass-through, zero-tolerance
+authorization gates, and missing evaluation evidence without installing a
+retrieval or evaluation vendor.
 
 ## Release policy
 

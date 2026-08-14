@@ -100,6 +100,19 @@ invent domain details, so require slice-level gains, latency and cost budgets,
 and a rollback gate before enabling it. Prefer deterministic decomposition for
 structured constraints that a generator could silently drop.
 
+Represent a request as an immutable retrieval envelope plus transformable text.
+Keep tenant, authorization, locale, time, version, source, exclusions, and
+exact-match literals in typed fields owned by policy or orchestration code;
+never ask generated text to carry those controls. Validate each rewrite against
+the envelope before retrieval. Run the original query first or alongside valid
+rewrites, and use it as the fallback when rewriting fails.
+
+Normalize rewrites only enough to detect duplicates without changing literal
+meaning. Remove empty, duplicate, over-limit, and constraint-losing rewrites
+before remote calls. Merge results by stable evidence ID, preserve route
+provenance, and trace counts and rejection reasons without query text.
+Treat a zero rewrite limit as an original-only route, not as an unbounded cap.
+
 ## Apply reranking deliberately
 
 Retrieve a broad candidate set, then rerank a smaller bounded set when candidate
@@ -117,6 +130,18 @@ contract exists; downstream thresholds need their own re-baseline. Test ties,
 duplicates, empty candidates, timeout pass-through, authorization preservation,
 and deterministic rollback.
 
+Define the reranker output contract before integration. For a pure ordering
+stage, require exactly one occurrence of every stable ID in its input window;
+unknown, duplicate, or missing IDs make the output malformed. Keep filtering or
+abstention in a separate named stage so a ranking response cannot silently drop
+evidence. Append candidates outside the rerank window in their original order.
+Skip the reranker when retrieval or its configured input window is empty.
+
+On timeout, dependency failure, or malformed output, return the complete
+original retrieval ranking, not an empty or partially remapped list. Record the
+reason and selected route, preserve retrieval and reranker scores in separate
+namespaces, and never let a reranker introduce an unauthorized candidate.
+
 ## Assemble context
 
 Build context from evidence, not from raw top-k order alone.
@@ -131,6 +156,20 @@ Build context from evidence, not from raw top-k order alone.
 
 Compression is a lossy retrieval stage and requires evaluation. Never compress
 away qualifiers, units, dates, exceptions, or attribution.
+
+### Guide context assembly changes
+
+Treat assembly as a deterministic, testable stage with an explicit token
+budget. Reserve space for instructions, the user request, the answer, and
+citation metadata before packing evidence. Deduplicate overlapping windows by
+stable source lineage, preserve qualifiers with their claims, and keep source
+boundaries visible to generation and citation validation.
+
+Test multiple relevant passages, conflicting sources, oversized evidence,
+position changes, and truncation at every boundary. Long context does not prove
+that evidence is usable: evaluate answer quality when critical evidence appears
+at the beginning, middle, and end. Record included, excluded, and truncated IDs
+plus bounded reasons without copying content into telemetry.
 
 ## Generate grounded answers
 
@@ -177,3 +216,9 @@ instructions. Define a deterministic fallback for planning failure.
   Labels](https://arxiv.org/abs/2212.10496), which introduces hypothetical
   document embeddings and motivates treating generated retrieval inputs as
   fallible rather than evidence.
+- Ma et al., [Query Rewriting for Retrieval-Augmented Large Language
+  Models](https://arxiv.org/abs/2305.14283).
+- Zhuang et al., [RankT5: Fine-Tuning T5 for Text Ranking with Ranking
+  Losses](https://arxiv.org/abs/2210.10634).
+- Liu et al., [Lost in the Middle: How Language Models Use Long
+  Contexts](https://arxiv.org/abs/2307.03172).
