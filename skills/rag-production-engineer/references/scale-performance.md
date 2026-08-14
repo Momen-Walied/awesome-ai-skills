@@ -51,6 +51,19 @@ Reject improvements that move work outside the measured window, weaken recall
 or authorization, increase retries, or omit tail percentiles. Add architecture
 only when profiling shows that a local change cannot meet the gate.
 
+### Guide deadline propagation
+
+Trace one request deadline from the entry point through every synchronous and
+concurrent branch. Derive each operation timeout from the remaining monotonic
+budget, including queue and retry time. Do not reset a full timeout at every
+stage or let retries outlive the request that created them.
+
+Guide the host to preserve existing clients and pass a deadline or remaining
+budget through their current interfaces. Test healthy budget reduction, stage
+timeout, no downstream call after exhaustion, cancellation where supported,
+and a machine-readable degradation reason. Use fake clocks or deterministic
+adapters in unit tests rather than timing sleeps.
+
 ## Design caches with semantics
 
 Define the cache unit, key, validity, tenant scope, and invalidation event

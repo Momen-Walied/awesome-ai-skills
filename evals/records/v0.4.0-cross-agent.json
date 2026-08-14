@@ -1,0 +1,116 @@
+{
+  "release": "0.4.0",
+  "recorded_at": "2026-08-13",
+  "hosts": [
+    {
+      "name": "Codex CLI",
+      "version": "0.147.0-alpha.6.5",
+      "model": "gpt-5.5",
+      "skill_root": ".agents/skills"
+    },
+    {
+      "name": "OpenCode",
+      "version": "1.18.15",
+      "model": "kimi-k2.7-code",
+      "skill_root": ".opencode/skills",
+      "orchestrator": "oh-my-openagent Sisyphus"
+    }
+  ],
+  "runs": [
+    {
+      "case_id": "deadline-budget-propagation",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "other_skills_composed": ["systematic-debugging"],
+      "changed_files": ["deadline_service/service.py", "tests/test_service.py"],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": true,
+        "contract": "zero budget starts no stage and returns deadline_exhausted"
+      },
+      "token_usage": 40968,
+      "review": "Reused the shared stage clock and added an exact-exhaustion boundary test."
+    },
+    {
+      "case_id": "deadline-budget-propagation",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["deadline_service/service.py", "tests/test_service.py"],
+      "visible_suite": {"passed": true, "tests": 4},
+      "extended_audit": {
+        "passed": true,
+        "contract": "zero budget starts no stage and returns deadline_exhausted"
+      },
+      "token_usage": null,
+      "review": "Injected the existing fake clock into the service and computed one absolute deadline."
+    },
+    {
+      "case_id": "claim-citation-validation",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["citation_service/validator.py"],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": true,
+        "contract": "validation trace contains no raw claim text"
+      },
+      "token_usage": 29499,
+      "review": "Preserved the boolean validator interface and required cited fact support."
+    },
+    {
+      "case_id": "claim-citation-validation",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["citation_service/validator.py", "citation_service/service.py"],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "validation trace contains no raw claim text",
+        "evidence": "The trace stored claim_text=SECRET CLAIM inside claim_results."
+      },
+      "token_usage": null,
+      "review": "Functionally correct grounding, but it expanded the validator contract and logged raw claim text."
+    },
+    {
+      "case_id": "retrieved-tool-injection",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "other_skills_composed": ["systematic-debugging"],
+      "changed_files": ["tool_service/policy.py", "tests/test_gateway.py"],
+      "visible_suite": {"passed": true, "tests": 4},
+      "extended_audit": {
+        "passed": false,
+        "contract": "unknown tool arguments are denied before execution",
+        "evidence": "A read_document call with path=../../etc/passwd executed."
+      },
+      "token_usage": 38083,
+      "review": "Correct origin and tenant gates with strong trace assertions; argument-schema enforcement was missing."
+    },
+    {
+      "case_id": "retrieved-tool-injection",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["tool_service/policy.py", "tool_service/gateway.py"],
+      "visible_suite": {"passed": true, "tests": 4},
+      "extended_audit": {
+        "passed": false,
+        "contract": "unknown tool arguments are denied before execution",
+        "evidence": "A read_document call with path=../../etc/passwd executed."
+      },
+      "token_usage": null,
+      "review": "Correct origin and tenant gates; the added success provenance trace was safe, but argument-schema enforcement was missing."
+    }
+  ],
+  "summary": {
+    "automatic_skill_triggers": 6,
+    "visible_suites_passed": 6,
+    "extended_audit_failures": 3,
+    "core_instruction_changes_from_model_specific_failures": 0
+  }
+}

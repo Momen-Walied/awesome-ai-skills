@@ -64,6 +64,18 @@ CASE_COMMANDS = {
         "verify": "python3 -m unittest discover -s tests -v",
         "inspect_diff": "git diff -- fallback_service tests specs .specify",
     },
+    "deadline-budget-propagation": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- deadline_service tests specs .specify",
+    },
+    "claim-citation-validation": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- citation_service tests specs .specify",
+    },
+    "retrieved-tool-injection": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- tool_service tests specs .specify",
+    },
 }
 
 

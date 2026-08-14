@@ -141,6 +141,12 @@ policy-sensitive timeout fallback that must fail closed when authorization
 state is stale. Both fixtures preserve working paths so an agent must make a
 bounded correction instead of replacing the architecture.
 
+The runtime-safety fixtures extend this approach to `deadline-budget-propagation`,
+`claim-citation-validation`, and `retrieved-tool-injection`. They test shared
+deadlines, claim-level grounding, untrusted-content provenance, tenant-scoped
+tool arguments, and observable denial without requiring a specific RAG
+framework or provider.
+
 ## Release policy
 
 A release must pass unit tests, Python compilation, corpus validation, the

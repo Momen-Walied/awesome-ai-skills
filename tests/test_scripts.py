@@ -787,6 +787,22 @@ class RepositoryContractTests(unittest.TestCase):
             0,
         )
 
+        runtime_results = json.loads(
+            (ROOT / "evals" / "records" / "v0.4.0-cross-agent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(len(runtime_results["runs"]), 6)
+        self.assertEqual(runtime_results["summary"]["automatic_skill_triggers"], 6)
+        self.assertEqual(runtime_results["summary"]["visible_suites_passed"], 6)
+        self.assertEqual(runtime_results["summary"]["extended_audit_failures"], 3)
+        self.assertEqual(
+            runtime_results["summary"][
+                "core_instruction_changes_from_model_specific_failures"
+            ],
+            0,
+        )
+
     def test_skill_guides_the_host_instead_of_claiming_execution(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -812,6 +828,19 @@ class RepositoryContractTests(unittest.TestCase):
             with self.subTest(filename=filename):
                 text = (references / filename).read_text(encoding="utf-8")
                 self.assertIn(section, text)
+
+        self.assertIn(
+            "Guide deadline propagation",
+            (references / "scale-performance.md").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "Guide citation validation changes",
+            (references / "retrieval-generation.md").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "Guide tool-call security changes",
+            (references / "reliability-security.md").read_text(encoding="utf-8"),
+        )
 
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
@@ -956,6 +985,37 @@ class EvaluationWorkspaceTests(unittest.TestCase):
         cases = {
             "ingestion-replay-revocation": (3, "test_revocation_removes_document"),
             "stale-policy-fallback": (1, "test_stale_policy_fallback_is_blocked"),
+        }
+        for case_id, (failure_count, expected_test) in cases.items():
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "workspace"
+                result = eval_workspace.prepare_workspace(case_id, output)
+                baseline = subprocess.run(
+                    ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                status = subprocess.run(
+                    ["git", "status", "--short"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertEqual(status.stdout, "")
+                self.assertNotEqual(baseline.returncode, 0)
+                self.assertEqual(baseline.stderr.count("... FAIL"), failure_count)
+                self.assertIn(expected_test, baseline.stderr)
+                self.assertIn("unittest", result["verify"])
+                self.assertTrue((output / ".specify" / "memory").is_dir())
+
+    def test_runtime_safety_fixtures_have_bounded_failures(self) -> None:
+        cases = {
+            "deadline-budget-propagation": (2, "test_healthy_path_receives"),
+            "claim-citation-validation": (2, "test_valid_but_unrelated"),
+            "retrieved-tool-injection": (3, "test_allowlisted_tool_from"),
         }
         for case_id, (failure_count, expected_test) in cases.items():
             with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:

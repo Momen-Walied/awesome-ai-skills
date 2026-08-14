@@ -72,6 +72,12 @@ The implementation suite currently covers three distinct ownership paths:
   revocation, hard deletion, and replay idempotency.
 - `stale-policy-fallback` tests primary failure, authorization freshness,
   fail-closed fallback behavior, and route telemetry.
+- `deadline-budget-propagation` tests one monotonic end-to-end budget,
+  decreasing stage timeouts, and downstream cancellation by omission.
+- `claim-citation-validation` tests claim-level support instead of accepting any
+  citation ID that happens to exist in the supplied context.
+- `retrieved-tool-injection` tests provenance, tenant-scoped arguments,
+  allowlists, denial traces, and proof that denied tools never execute.
 
 Each case contains an existing Spec Kit artifact and an intentionally failing
 acceptance scenario. The agent must make the suite pass through a bounded

@@ -100,6 +100,20 @@ Use source trust, provenance, and content policy as retrieval or ranking signals
 when the domain requires them. Do not rely on a prompt alone as the security
 boundary.
 
+### Guide tool-call security changes
+
+Trace the origin of every proposed action from user intent, application policy,
+model output, and retrieved content to the execution gateway. Retrieved text
+can supply data but never grants authority, expands tenant scope, selects a
+consequential tool, or supplies unrestricted arguments.
+
+Guide the host to enforce provenance, tool allowlists, argument schemas,
+tenant-scoped resource checks, and confirmation at the existing tool boundary.
+Test direct and indirect prompt injection, an allowlisted tool proposed only by
+a document, argument smuggling, a valid user-authorized call, denial telemetry,
+and that denied calls never reach the executor. Keep prompt instructions as
+defense in depth, not the authorization mechanism.
+
 ## Protect sensitive data
 
 Classify source data, prompts, traces, evaluation sets, and caches. Apply least

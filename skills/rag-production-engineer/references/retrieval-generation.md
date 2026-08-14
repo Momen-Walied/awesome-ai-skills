@@ -108,6 +108,19 @@ confidence to a safe response or human review.
 Use structured output when downstream code consumes the result. Validate the
 schema and treat malformed output as a bounded failure, not as free text.
 
+### Guide citation validation changes
+
+Trace claims from generated structure to the exact authorized context units
+that support them. Distinguish a citation identifier that merely exists from a
+citation that entails the claim. Preserve immutable source and chunk versions
+through validation and the final response.
+
+Guide the host to reuse the current answer schema and validator. Test supported
+claims, valid IDs with unrelated evidence, missing citations, citations outside
+the supplied context, conflicting evidence, and the configured abstention or
+review path. Use deterministic fact or identifier checks where possible and a
+calibrated semantic judge only when entailment cannot be expressed reliably.
+
 ## Use agentic retrieval sparingly
 
 Use an agent only when runtime decisions cannot be represented reliably as a
