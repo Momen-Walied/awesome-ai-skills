@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: awesome-ai-skills
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # RAG production engineer

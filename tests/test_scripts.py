@@ -829,6 +829,28 @@ class RepositoryContractTests(unittest.TestCase):
             0,
         )
 
+        retrieval_results = json.loads(
+            (ROOT / "evals" / "records" / "v0.6.0-cross-agent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(len(retrieval_results["runs"]), 4)
+        self.assertEqual(len(retrieval_results["blocked_runs"]), 2)
+        self.assertEqual(
+            retrieval_results["summary"]["automatic_skill_triggers"], 4
+        )
+        self.assertEqual(retrieval_results["summary"]["visible_suites_passed"], 4)
+        self.assertEqual(retrieval_results["summary"]["extended_audit_passes"], 1)
+        self.assertEqual(
+            retrieval_results["summary"]["extended_audit_failures"], 3
+        )
+        self.assertEqual(
+            retrieval_results["summary"][
+                "core_instruction_changes_from_model_specific_failures"
+            ],
+            0,
+        )
+
     def test_skill_guides_the_host_instead_of_claiming_execution(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -863,6 +885,16 @@ class RepositoryContractTests(unittest.TestCase):
             "Guide citation validation changes",
             (references / "retrieval-generation.md").read_text(encoding="utf-8"),
         )
+        retrieval_generation = (references / "retrieval-generation.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Guide hybrid fusion changes", retrieval_generation)
+        self.assertIn("Guide query transformation changes", retrieval_generation)
+        self.assertIn("rank-based method", retrieval_generation)
+        evaluation = (references / "evaluation.md").read_text(encoding="utf-8")
+        self.assertIn("Detect hidden regressions", evaluation)
+        self.assertIn("Aggregate improvement cannot compensate", evaluation)
+        self.assertRegex(evaluation.lower(), r"missing\s+critical cohort")
         self.assertIn(
             "Guide tool-call security changes",
             (references / "reliability-security.md").read_text(encoding="utf-8"),
@@ -1076,6 +1108,39 @@ class EvaluationWorkspaceTests(unittest.TestCase):
         cases = {
             "rag-telemetry-boundary": (4, "test_sampled_request_exports"),
             "grounded-slo-burn": (3, "test_ungrounded_http_success"),
+        }
+        for case_id, (failure_count, expected_test) in cases.items():
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "workspace"
+                result = eval_workspace.prepare_workspace(case_id, output)
+                baseline = subprocess.run(
+                    ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                status = subprocess.run(
+                    ["git", "status", "--short"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertEqual(status.stdout, "")
+                self.assertNotEqual(baseline.returncode, 0)
+                self.assertEqual(baseline.stderr.count("... FAIL"), failure_count)
+                self.assertIn(expected_test, baseline.stderr)
+                self.assertIn("unittest", result["verify"])
+                self.assertTrue((output / ".specify" / "memory").is_dir())
+
+    def test_retrieval_quality_fixtures_have_bounded_failures(self) -> None:
+        cases = {
+            "hybrid-rank-fusion": (2, "test_consensus_document_wins"),
+            "retrieval-slice-regression": (
+                5,
+                "test_critical_cohort_regression_blocks",
+            ),
         }
         for case_id, (failure_count, expected_test) in cases.items():
             with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:

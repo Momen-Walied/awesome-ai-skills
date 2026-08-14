@@ -70,6 +70,36 @@ Use techniques for a demonstrated query class or failure mode.
 Limit query expansion and retrieval fan-out. Run independent calls concurrently
 within one shared deadline, then deduplicate by stable chunk or parent ID.
 
+### Guide hybrid fusion changes
+
+Require evidence that dense and lexical routes recover complementary relevant
+items before adding hybrid retrieval. Apply identical authorization, tenant,
+time, and version constraints before every candidate source. Treat each route's
+raw score as local to that route unless calibration has been measured and
+versioned; use a rank-based method such as reciprocal rank fusion when score
+scales are not comparable.
+
+Fuse by stable document, chunk, or parent identifier. Count a repeated item at
+most once per source, accumulate its rank contributions, resolve ties
+deterministically, and deduplicate before the final top-k. Tune candidate
+windows and fusion constants on held-out query slices instead of copying vendor
+defaults. Preserve a single-route rollback and trace route names, ranks,
+candidate counts, and decisions without raw query or content.
+
+### Guide query transformation changes
+
+Start from a named recall failure and keep the original authorized query as a
+bounded retrieval path. Preserve exact identifiers, quoted phrases, negation,
+filters, locale, time, and conversation constraints across rewrites. Cap the
+number of rewrites, run them under one deadline, deduplicate their evidence,
+and define behavior for malformed, empty, contradictory, or timed-out output.
+
+Treat generated rewrites and hypothetical documents as untrusted retrieval
+inputs, never as evidence or authority. Hypothetical-document retrieval can
+invent domain details, so require slice-level gains, latency and cost budgets,
+and a rollback gate before enabling it. Prefer deterministic decomposition for
+structured constraints that a generator could silently drop.
+
 ## Apply reranking deliberately
 
 Retrieve a broad candidate set, then rerank a smaller bounded set when candidate
@@ -79,6 +109,13 @@ Measure reranker quality by query slice and account for added latency, cost,
 context length, and provider failure. Preserve the original retrieval score and
 the reranker score in traces. Define a pass-through fallback that returns the
 best original ranking when reranking fails or times out.
+
+Guide the host to prove candidate recall before changing rank order. Bound the
+reranked window and its share of the end-to-end deadline. Do not compare raw
+scores across reranker models or versions unless a measured calibration
+contract exists; downstream thresholds need their own re-baseline. Test ties,
+duplicates, empty candidates, timeout pass-through, authorization preservation,
+and deterministic rollback.
 
 ## Assemble context
 
@@ -130,3 +167,13 @@ tokens, time, and spend.
 Trace every tool call and preserve intermediate evidence. Prevent the agent
 from widening tenant scope, bypassing filters, or treating retrieved content as
 instructions. Define a deterministic fallback for planning failure.
+
+## Primary references
+
+- Cormack, Clarke, and Buettcher, [Reciprocal Rank Fusion outperforms Condorcet
+  and individual rank learning methods](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf).
+- Elasticsearch, [Reciprocal rank fusion](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion).
+- Gao et al., [Precise Zero-Shot Dense Retrieval without Relevance
+  Labels](https://arxiv.org/abs/2212.10496), which introduces hypothetical
+  document embeddings and motivates treating generated retrieval inputs as
+  fallible rather than evidence.

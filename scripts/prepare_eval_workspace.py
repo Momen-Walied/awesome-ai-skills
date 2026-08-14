@@ -84,6 +84,14 @@ CASE_COMMANDS = {
         "verify": "python3 -m unittest discover -s tests -v",
         "inspect_diff": "git diff -- slo_monitor tests specs .specify",
     },
+    "hybrid-rank-fusion": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- hybrid_service tests specs .specify",
+    },
+    "retrieval-slice-regression": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- retrieval_eval tests specs .specify",
+    },
 }
 
 

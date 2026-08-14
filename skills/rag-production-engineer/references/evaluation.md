@@ -65,6 +65,26 @@ Track confidence intervals or repeated-run variance when model output is
 nondeterministic. A small mean improvement with large variance is not a safe
 release signal.
 
+### Detect hidden regressions
+
+Compare the baseline and candidate on the same case identifiers, labels, top-k,
+and dataset version. Report baseline, candidate, and delta overall and for every
+critical cohort. Aggregate improvement cannot compensate for a security
+failure or a regression beyond a cohort's declared tolerance. Treat a missing
+critical cohort, missing labels, or an empty acceptance slice as an evidence gap,
+not a passing zero.
+
+Use paired case-level differences when possible. For small cohorts, publish the
+case count and uncertainty or repeated-run variance alongside the mean. Inspect
+whether one tenant, language, source, or common query class dominates the
+aggregate. Keep unauthorized retrieval, permission-filter correctness,
+citation integrity, and other zero-tolerance invariants as independent gates.
+
+For fusion and reranking changes, retain candidate recall before ranking, early
+precision after ranking, first-relevant rank, duplicate rate, empty-result rate,
+source diversity, latency, and cost. This localizes whether a gain came from
+candidate discovery, ordering, or merely increasing fan-out.
+
 ## Set release gates
 
 Define absolute thresholds and regression limits before running the candidate.
@@ -105,3 +125,10 @@ correction, latency, errors, and cost.
 Treat implicit feedback carefully because clicks and session length can reward
 confusing answers. Sample production failures for expert labeling and add them
 to the regression set after removing sensitive information.
+
+## Primary references
+
+- Thakur et al., [BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of
+  Information Retrieval Models](https://arxiv.org/abs/2104.08663), which shows
+  why retrieval methods need evaluation across heterogeneous tasks instead of
+  one aggregate or in-domain result.

@@ -1,0 +1,119 @@
+{
+  "release": "0.6.0",
+  "recorded_at": "2026-08-14",
+  "hosts": [
+    {
+      "name": "Codex CLI",
+      "version": "0.147.0-alpha.6.5",
+      "model": "gpt-5.5",
+      "skill_root": ".agents/skills"
+    },
+    {
+      "name": "OpenCode",
+      "version": "1.18.15",
+      "model": "kimi-k2.7-code",
+      "skill_root": ".agents/skills",
+      "orchestrator": "oh-my-openagent Sisyphus"
+    },
+    {
+      "name": "Gemini CLI",
+      "version": "0.42.0",
+      "skill_root": ".agents/skills",
+      "status": "environment_blocked"
+    }
+  ],
+  "runs": [
+    {
+      "case_id": "hybrid-rank-fusion",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "hybrid_service/fusion.py",
+        "tests/test_service.py"
+      ],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "a duplicate document contributes at most once per source ranking",
+        "evidence": "The implementation accumulated both duplicate positions from one retriever and changed the winner."
+      },
+      "token_usage": 44643,
+      "review": "Activated the skill automatically, traced authorization and rollback, used the correct reciprocal-rank formula, and kept the implementation bounded to fusion plus one regression assertion."
+    },
+    {
+      "case_id": "retrieval-slice-regression",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "retrieval_eval/evaluator.py",
+        "retrieval_eval/models.py",
+        "tests/test_evaluator.py"
+      ],
+      "visible_suite": {"passed": true, "tests": 6},
+      "extended_audit": {
+        "passed": true,
+        "contract": "an unauthorized candidate outside the quality top-k still blocks release",
+        "evidence": "The evaluator checked all candidate IDs independently of the quality cutoff."
+      },
+      "token_usage": 53358,
+      "review": "Activated the skill automatically, preserved paired versions, and separated aggregate, cohort, missing-evidence, and authorization gates."
+    },
+    {
+      "case_id": "hybrid-rank-fusion",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["hybrid_service/fusion.py"],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "RRF uses 1 / (k + rank) and counts one position per document per source",
+        "evidence": "The implementation transformed rank to a reciprocal first, then used 1 / (k + reciprocal_rank), and also accumulated repeated IDs from one source."
+      },
+      "token_usage": null,
+      "review": "Activated the skill automatically and edited only the fusion boundary, but the visible consensus example did not distinguish the incorrect formula from RRF."
+    },
+    {
+      "case_id": "retrieval-slice-regression",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "retrieval_eval/evaluator.py",
+        "retrieval_eval/models.py",
+        "tests/test_evaluator.py"
+      ],
+      "visible_suite": {"passed": true, "tests": 7},
+      "extended_audit": {
+        "passed": false,
+        "contract": "authorization is a zero-tolerance gate independent of retrieval top-k",
+        "evidence": "The evaluator checked forbidden IDs only inside candidate_ids[:top_k], allowing an unauthorized returned candidate outside the quality window."
+      },
+      "token_usage": null,
+      "review": "Activated the skill automatically and produced complete cohort reporting, but coupled the authorization check to the quality metric cutoff."
+    }
+  ],
+  "blocked_runs": [
+    {
+      "case_id": "hybrid-rank-fusion",
+      "host": "Gemini CLI",
+      "reason": "Gemini CLI authentication remained ineligible and required migration to Antigravity before a model turn could start."
+    },
+    {
+      "case_id": "retrieval-slice-regression",
+      "host": "Gemini CLI",
+      "reason": "Gemini CLI authentication remained ineligible and required migration to Antigravity before a model turn could start."
+    }
+  ],
+  "summary": {
+    "automatic_skill_triggers": 4,
+    "visible_suites_passed": 4,
+    "extended_audit_passes": 1,
+    "extended_audit_failures": 3,
+    "host_environment_blocks": 2,
+    "fixture_contract_improvements_from_general_findings": 3,
+    "core_instruction_changes_from_model_specific_failures": 0
+  }
+}

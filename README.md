@@ -44,9 +44,9 @@ npx skills@1.5.20 add . \
   --agent codex claude-code opencode antigravity
 ```
 
-Installation from GitHub works now. The `skills.sh` directory listing is pending
-upstream indexing in
-[`vercel-labs/skills#1951`](https://github.com/vercel-labs/skills/issues/1951).
+Installation from GitHub and the
+[`skills.sh` directory listing](https://www.skills.sh/momen-walied/awesome-ai-skills/rag-production-engineer)
+are available.
 
 ## Validate
 
@@ -151,6 +151,12 @@ The observability fixtures add `rag-telemetry-boundary` and
 `grounded-slo-burn`. They test coherent trace propagation, redaction, metric
 cardinality, degraded-trace retention, grounded outcome indicators, and
 multi-window SLO burn without installing a monitoring vendor.
+
+The retrieval-quality fixtures add `hybrid-rank-fusion` and
+`retrieval-slice-regression`. They test fusion without comparing incompatible
+raw scores, stable-ID deduplication, tenant-safe rollback, paired cohort
+reporting, zero-tolerance authorization gates, and missing evaluation evidence
+without installing a retrieval or evaluation vendor.
 
 ## Release policy
 

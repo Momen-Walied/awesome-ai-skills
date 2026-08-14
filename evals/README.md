@@ -64,7 +64,8 @@ repository unless a short excerpt is necessary to explain a failure.
 
 ## Implementation cases
 
-The implementation suite currently covers three distinct ownership paths:
+The implementation suite covers distinct ownership paths across the RAG
+lifecycle:
 
 - `top-down-rag-implementation` tests a flagged retrieval correction with
   tenant isolation, tracing, and dense rollback.
@@ -82,11 +83,17 @@ The implementation suite currently covers three distinct ownership paths:
   bounded metric dimensions, and degraded-trace retention.
 - `grounded-slo-burn` tests user-outcome SLIs, latency budgets, multi-window
   burn alerts, and actionable ownership metadata.
+- `hybrid-rank-fusion` tests rank-based fusion across incompatible score scales,
+  stable-ID deduplication, tenant isolation, rollback, and bounded telemetry.
+- `retrieval-slice-regression` tests paired baseline/candidate reporting,
+  critical-cohort gates, unauthorized-result rejection, missing evidence, and
+  run-version provenance.
 
 Each case contains an existing Spec Kit artifact and an intentionally failing
 acceptance scenario. The agent must make the suite pass through a bounded
 implementation rather than producing a parallel plan.
 
-Add future implementation fixtures across ingestion replay, retrieval quality,
-authorization, tracing, latency, and provider failure. Keep each fixture small
-enough to inspect, but include enough layers to require real system tracing.
+Add future implementation fixtures across query transformation, reranking,
+context assembly, ingestion replay, authorization, tracing, latency, and
+provider failure. Keep each fixture small enough to inspect, but include enough
+layers to require real system tracing.
