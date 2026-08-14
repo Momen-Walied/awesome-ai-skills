@@ -59,6 +59,40 @@ test recorder or exporter. Also test the user-visible behavior because a span
 can be correct while the fallback, authorization decision, or response is
 wrong. Do not introduce a new observability vendor merely to add one signal.
 
+### Preserve trace context and sampling coherence
+
+Propagate the incoming trace context through retrieval, reranking, generation,
+validation, fallback, and tool boundaries. Child spans keep the trace
+identifier and receive distinct span identifiers. Across queues or fan-out,
+use the host stack's context carrier and span links where a strict parent-child
+relationship would be false. Test the exported trace graph, not only calls to
+the instrumentation API.
+
+Choose sampling from the operator question and cost budget. Head sampling can
+use only information known when the trace starts; outcome-aware retention
+requires a tail or buffered decision. Keep coherent traces for errors,
+timeouts, denials, fallbacks, and selected evaluation cohorts. Do not derive
+population rates from biased trace samples unless the sampling probability is
+known and the calculation compensates for it.
+
+### Keep telemetry safe and bounded
+
+Separate diagnostic attributes from metric dimensions. Put bounded route,
+status, operation, provider, model, and version values on metrics. Keep request,
+tenant, user, document, and session identifiers out of metric dimensions. Use
+protected traces or logs only when those identifiers are necessary and allowed
+by the data policy.
+
+Treat raw queries, retrieved content, prompts, tool arguments, and generated
+answers as content capture, not normal metadata. Disable content capture by
+default, redact before export, and test the serialized telemetry for secrets.
+Hashing is not anonymization when the source space is small or reversible.
+
+Treat semantic conventions as a versioned integration contract. Inspect the
+installed SDK, emitted schema, and backend support before adopting names from a
+newer convention. Keep the application's internal outcome vocabulary stable
+when OpenTelemetry, a vendor SDK, or a GenAI convention changes.
+
 ## Define metrics and service indicators
 
 Build service indicators around the user outcome and each dependency.
@@ -75,6 +109,22 @@ Build service indicators around the user outcome and each dependency.
 
 Keep metric labels bounded. Put document IDs, full error text, and request IDs
 in traces or logs, not metric dimensions.
+
+### Guide SLO and alert implementation
+
+Define a good event from the user's RAG outcome. Depending on the product, that
+can require an authorized, grounded, non-abstained answer within a latency and
+freshness budget, not merely an HTTP success. Keep availability, grounded
+quality, latency, freshness, and cost as separate indicators when they have
+different owners or mitigations.
+
+Compute burn against an explicit SLO error budget using counters and latency
+histograms. Require paired short and long windows for fast-burn paging so a
+brief spike does not page while a sustained incident is missed. Define bounded
+behavior for no-traffic and low-volume windows. Every firing alert needs a
+machine-readable reason, owner, severity, diagnostic path, and tested runbook.
+Do not create a dashboard or paging platform when the repository only needs a
+local instrumentation or alert-rule correction.
 
 ## Build operational views
 

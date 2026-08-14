@@ -78,6 +78,10 @@ The implementation suite currently covers three distinct ownership paths:
   citation ID that happens to exist in the supplied context.
 - `retrieved-tool-injection` tests provenance, tenant-scoped arguments,
   allowlists, denial traces, and proof that denied tools never execute.
+- `rag-telemetry-boundary` tests context propagation, content redaction,
+  bounded metric dimensions, and degraded-trace retention.
+- `grounded-slo-burn` tests user-outcome SLIs, latency budgets, multi-window
+  burn alerts, and actionable ownership metadata.
 
 Each case contains an existing Spec Kit artifact and an intentionally failing
 acceptance scenario. The agent must make the suite pass through a bounded

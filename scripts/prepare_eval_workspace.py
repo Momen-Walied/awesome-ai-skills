@@ -76,6 +76,14 @@ CASE_COMMANDS = {
         "verify": "python3 -m unittest discover -s tests -v",
         "inspect_diff": "git diff -- tool_service tests specs .specify",
     },
+    "rag-telemetry-boundary": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- rag_observability tests specs .specify",
+    },
+    "grounded-slo-burn": {
+        "verify": "python3 -m unittest discover -s tests -v",
+        "inspect_diff": "git diff -- slo_monitor tests specs .specify",
+    },
 }
 
 

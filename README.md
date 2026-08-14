@@ -147,6 +147,11 @@ deadlines, claim-level grounding, untrusted-content provenance, tenant-scoped
 tool arguments, and observable denial without requiring a specific RAG
 framework or provider.
 
+The observability fixtures add `rag-telemetry-boundary` and
+`grounded-slo-burn`. They test coherent trace propagation, redaction, metric
+cardinality, degraded-trace retention, grounded outcome indicators, and
+multi-window SLO burn without installing a monitoring vendor.
+
 ## Release policy
 
 A release must pass unit tests, Python compilation, corpus validation, the

@@ -803,6 +803,32 @@ class RepositoryContractTests(unittest.TestCase):
             0,
         )
 
+        observability_results = json.loads(
+            (ROOT / "evals" / "records" / "v0.5.0-cross-agent.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(len(observability_results["runs"]), 4)
+        self.assertEqual(len(observability_results["blocked_runs"]), 2)
+        self.assertEqual(
+            observability_results["summary"]["automatic_skill_triggers"], 4
+        )
+        self.assertEqual(
+            observability_results["summary"]["visible_suites_passed"], 4
+        )
+        self.assertEqual(
+            observability_results["summary"]["extended_audit_failures"], 4
+        )
+        self.assertEqual(
+            observability_results["summary"]["host_environment_blocks"], 2
+        )
+        self.assertEqual(
+            observability_results["summary"][
+                "core_instruction_changes_from_model_specific_failures"
+            ],
+            0,
+        )
+
     def test_skill_guides_the_host_instead_of_claiming_execution(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -841,6 +867,10 @@ class RepositoryContractTests(unittest.TestCase):
             "Guide tool-call security changes",
             (references / "reliability-security.md").read_text(encoding="utf-8"),
         )
+        observability = (references / "observability.md").read_text(encoding="utf-8")
+        self.assertIn("Preserve trace context and sampling coherence", observability)
+        self.assertIn("Keep telemetry safe and bounded", observability)
+        self.assertIn("Guide SLO and alert implementation", observability)
 
     def test_skill_relative_file_references_exist(self) -> None:
         skill_root = ROOT / "skills" / "rag-production-engineer"
@@ -1016,6 +1046,36 @@ class EvaluationWorkspaceTests(unittest.TestCase):
             "deadline-budget-propagation": (2, "test_healthy_path_receives"),
             "claim-citation-validation": (2, "test_valid_but_unrelated"),
             "retrieved-tool-injection": (3, "test_allowlisted_tool_from"),
+        }
+        for case_id, (failure_count, expected_test) in cases.items():
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "workspace"
+                result = eval_workspace.prepare_workspace(case_id, output)
+                baseline = subprocess.run(
+                    ["python3", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                status = subprocess.run(
+                    ["git", "status", "--short"],
+                    cwd=output,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertEqual(status.stdout, "")
+                self.assertNotEqual(baseline.returncode, 0)
+                self.assertEqual(baseline.stderr.count("... FAIL"), failure_count)
+                self.assertIn(expected_test, baseline.stderr)
+                self.assertIn("unittest", result["verify"])
+                self.assertTrue((output / ".specify" / "memory").is_dir())
+
+    def test_observability_fixtures_have_bounded_failures(self) -> None:
+        cases = {
+            "rag-telemetry-boundary": (4, "test_sampled_request_exports"),
+            "grounded-slo-burn": (3, "test_ungrounded_http_success"),
         }
         for case_id, (failure_count, expected_test) in cases.items():
             with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as directory:

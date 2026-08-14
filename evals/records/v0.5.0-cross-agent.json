@@ -1,0 +1,112 @@
+{
+  "release": "0.5.0",
+  "recorded_at": "2026-08-14",
+  "hosts": [
+    {
+      "name": "Codex CLI",
+      "version": "0.147.0-alpha.6.5",
+      "model": "gpt-5.5",
+      "skill_root": ".agents/skills"
+    },
+    {
+      "name": "OpenCode",
+      "version": "1.18.15",
+      "model": "kimi-k2.7-code",
+      "skill_root": ".opencode/skills",
+      "orchestrator": "oh-my-openagent Sisyphus"
+    },
+    {
+      "name": "Gemini CLI",
+      "version": "0.42.0",
+      "skill_root": ".gemini/skills",
+      "status": "environment_blocked"
+    }
+  ],
+  "runs": [
+    {
+      "case_id": "rag-telemetry-boundary",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "rag_observability/service.py",
+        "rag_observability/telemetry.py"
+      ],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "non-head-sampled error traces are retained",
+        "evidence": "The recorder retained fallback only and dropped outcome=error."
+      },
+      "token_usage": 237936,
+      "review": "Activated the skill automatically, reused Spec Kit, removed payload attributes, propagated the incoming trace ID, and changed two files."
+    },
+    {
+      "case_id": "grounded-slo-burn",
+      "host": "Codex CLI",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["slo_monitor/monitor.py"],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "a fast grounded HTTP 500 response is a bad event",
+        "evidence": "The good-event predicate ignored HTTP status."
+      },
+      "token_usage": null,
+      "review": "Kept the correction in one monitor file and added multi-window gating with owner and runbook metadata."
+    },
+    {
+      "case_id": "rag-telemetry-boundary",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": [
+        "rag_observability/service.py",
+        "rag_observability/telemetry.py"
+      ],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "non-head-sampled error traces are retained",
+        "evidence": "The recorder retained fallback only and dropped outcome=error."
+      },
+      "token_usage": 49598,
+      "review": "Activated the skill automatically and made the bounded two-file fix, but the orchestrator also left an untracked .omo directory."
+    },
+    {
+      "case_id": "grounded-slo-burn",
+      "host": "OpenCode",
+      "automatic_trigger": true,
+      "spec_kit_detected": true,
+      "changed_files": ["slo_monitor/monitor.py"],
+      "visible_suite": {"passed": true, "tests": 5},
+      "extended_audit": {
+        "passed": false,
+        "contract": "a fast grounded HTTP 500 response is a bad event",
+        "evidence": "The good-event predicate ignored HTTP status."
+      },
+      "token_usage": null,
+      "review": "Implemented the intended monitor correction in one file and left an untracked orchestrator state directory."
+    }
+  ],
+  "blocked_runs": [
+    {
+      "case_id": "rag-telemetry-boundary",
+      "host": "Gemini CLI",
+      "reason": "Gemini CLI authentication returned IneligibleTierError and required migration to Antigravity before a model turn started."
+    },
+    {
+      "case_id": "grounded-slo-burn",
+      "host": "Gemini CLI",
+      "reason": "Gemini CLI authentication returned IneligibleTierError and required migration to Antigravity before a model turn started."
+    }
+  ],
+  "summary": {
+    "automatic_skill_triggers": 4,
+    "visible_suites_passed": 4,
+    "extended_audit_failures": 4,
+    "host_environment_blocks": 2,
+    "core_instruction_changes_from_model_specific_failures": 0
+  }
+}
